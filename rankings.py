@@ -10,10 +10,8 @@ import pandas as pd
 import numpy as np
 
 
-# Helper Functions
-
 # Find all teams in database
-def findTeams(results):
+def find_teams(results):
     """
     todo.
 
@@ -36,7 +34,7 @@ def findTeams(results):
 
 
 # Initialize rankings for all teams
-def rankingsInit(allTeams, ratingCoeff, rankingType):
+def rankings_init(allTeams, ratingCoeff, rankingType):
     """
     todo.
 
@@ -111,7 +109,7 @@ def elo_simple(homeElo, awayElo, goalDiff, k):
     return (homeElo_adj, awayElo_adj, predictError)
 
 
-def ratingElo(homeElo, awayElo, goalDiff, ratingCoeffMethod):
+def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod):
     """
     todo.
 
@@ -158,8 +156,8 @@ def ratingElo(homeElo, awayElo, goalDiff, ratingCoeffMethod):
 
 
 # Regress Rankings at Season Start
-def seasonStart(results, rankingDict, ratingCoeff, rankingType, season,
-                allTeams):
+def season_start(results, rankingDict, ratingCoeff, rankingType, season,
+                 allTeams):
     """
     todo.
 
@@ -209,7 +207,7 @@ def seasonStart(results, rankingDict, ratingCoeff, rankingType, season,
 
 
 # Calculate rankings for each match
-def gameRanking(results, ratingCoeff, rankingType):
+def game_ranking(results, ratingCoeff, rankingType):
     """
     todo.
 
@@ -227,7 +225,7 @@ def gameRanking(results, ratingCoeff, rankingType):
     None.
 
     """
-    allTeams = findTeams(results)
+    allTeams = find_teams(results)
 
     for index, row in enumerate(results.itertuples(index=False)):
         # print(row)
@@ -236,15 +234,15 @@ def gameRanking(results, ratingCoeff, rankingType):
 #         print('Index: ' + str(index) + '  Season: ' + str(season))
         for rankingMethod in rankingType:
             if index == 0:
-                rankingDict = rankingsInit(allTeams, ratingCoeff,
-                                           rankingMethod)
+                rankingDict = rankings_init(allTeams, ratingCoeff,
+                                            rankingMethod)
                 seasonLast = season
                 print('Start ranking ' + str(season))
     #         elif (results[index].season - results[index - 1].season) > 0:
 #             elif (results.Season[index] - results.Season[index - 1]) > 0:
             elif (season - seasonLast) > 0:
-                rankingDict = seasonStart(results, rankingDict, ratingCoeff,
-                                          rankingMethod, season, allTeams)
+                rankingDict = season_start(results, rankingDict, ratingCoeff,
+                                           rankingMethod, season, allTeams)
                 seasonLast = season
     #             print(str(season))
 
@@ -258,9 +256,9 @@ def gameRanking(results, ratingCoeff, rankingType):
             goalDiff = row[5] - row[2]
 
             if 'Elo' in rankingMethod:
-                [eloHome, eloAway, predictError] = ratingElo(eloHome, eloAway,
-                                                             goalDiff,
-                                                             ratingCoeff[rankingMethod])
+                [eloHome, eloAway, predictError] = rating_elo(eloHome, eloAway,
+                                                              goalDiff,
+                                                              ratingCoeff[rankingMethod])
             else:
                 raise ValueError('Unknown Ranking Method.')
 

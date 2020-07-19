@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Functions to calculate optimal parameters for ranking systems.
+Setup workspace.
 
 @author: Scott
 """
 
 # Setup
 
-import ranking as rk
+import Rankings as rk
+import Rankings_Optimize as rkopt
+import Ranking_Plots as rkplt
 
 import pandas as pd
 import numpy as np
 # %matplotlib widget
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+# import matplotlib.pyplot as plt
+# import matplotlib.dates as mdates
 # import matplotlib.cbook as cbook
-from pandas.plotting import register_matplotlib_converters
-register_matplotlib_converters()
+# from pandas.plotting import register_matplotlib_converters
+# register_matplotlib_converters()
 
 
 # =============================================================================
@@ -25,14 +27,38 @@ register_matplotlib_converters()
 # %matplotlib widget
 # =============================================================================
 
-
 # Import Data
 results = pd.read_csv('Results_Composite.csv')
+print('Results shape: ', results.shape)
 
-print(results.shape)
+
+def results_shrink(results, startYear=2010, endYear=2019):
+    """
+    Select a subsection of all results.
+
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+    startYear : TYPE, optional
+        Season start of selection. The default is 2010.
+    endYear : TYPE, optional
+        Season start of end of selection. The default is 2019.
+
+    Returns
+    -------
+    resultsShrink : TYPE
+        Subsection of results.
+
+    """
+    resultsShrink = results[results.Season >= startYear]
+
+    print(results.shape)
+    print(resultsShrink.shape)
+    return resultsShrink
+
 
 # Initiailize for All Ranking Types
-
 ratingCoeff = {}
 ratingCoeff['simpleElo'] = {'initRating': 1500,
                             'avgRating': 1500,
@@ -73,105 +99,7 @@ for rankingType in list(ratingCoeff.keys()):
 # rankingType = 'simpleElo'
 rankingType = ['basicElo']
 
-results, rankingDict = rk.gameRanking(results, ratingCoeff, rankingType)
-
-# Plot Error of each game
-rankingMethod = rankingType[0]
-
-# https://matplotlib.org/3.1.1/gallery/text_labels_and_annotations/date.html
-years = mdates.YearLocator(10)   # every year, https://matplotlib.org/3.1.1/api/dates_api.html#matplotlib.dates.YearLocator
-months = mdates.MonthLocator()  # every month
-years_fmt = mdates.DateFormatter('%Y')
-
-fig, ax = plt.subplots()
-# plt.plot(results['Date'], results['simpleElo Error'],'.')
-# ax.plot('Date', 'simpleElo Error', data = results)
-dates = results['Date'].to_numpy(dtype='datetime64[ns]')
-ax.plot(dates, results[rankingMethod + ' Error'], '.')
-
-# format the ticks
-ax.xaxis.set_major_locator(years)
-ax.xaxis.set_major_formatter(years_fmt)
-# ax.xaxis.set_minor_locator(months)
-# ax.locator_params(axis='x',nbins=10)
-
-# round to nearest years.
-datemin = np.datetime64(results['Date'][0], 'Y')
-datemax = np.datetime64(np.datetime64(results['Date'].iloc[-1], 'Y') + np.timedelta64(1, 'Y'))
-ax.set_xlim(datemin, datemax)
-
-# format the coords message box
-ax.format_xdata = mdates.DateFormatter('%Y-%m-%d')
-ax.grid(True)
-
-ax.set(xlabel='Date', ylabel='Square Error')
-
-# rotates and right aligns the x labels, and moves the bottom of the
-# axes up to make room for them
-fig.autofmt_xdate()
-
-plt.show()
-
-# Plot Boxplot of error for each season
-rankingMethod = rankingType[0]
-# rankingMethod = 'basicElo'
-
-# results.groupby('Season').boxplot([rankingMethod + ' Error'])
-# results.groupby('Season')
-# print(results.groupby('Season').mean()['basicElo Error'])
-
-plt.plot(results.groupby('Season').median()[rankingMethod + ' Error'])
-plt.plot(results.groupby('Season').mean()[rankingMethod + ' Error'])
-
-# results.boxplot(column = [rankingMethod + ' Error'], by = 'Season')
-
-plt.figure()
-plt.plot(results.groupby('Season').count()[rankingMethod + ' Error'])
-
-# Iterate rankings through K values
-allTeams = rk.findTeams(results)
-rankingDict = rk.rankingsInit(allTeams, rk.initEloSimple)
-eloError = pd.DataFrame(columns=['k', 'Elo_Error'])
-
-for k in range(10, 60, 10):
-    results, rankingDict = rk.gameRanking(results, rankingDict, k)
-#     print(k)
-    averageError = results['simpleElo Error'].mean()
-#     print(averageError)
-    eloError = eloError.append({'k': k, 'Elo_Error': averageError},
-                               ignore_index=True)
-
-eloError.plot(x='k', y='Elo_Error')
-
-minErroridx = eloError['Elo_Error'].idxmin()
-minError = eloError['Elo_Error'][minErroridx]
-minErrork = eloError['k'][minErroridx]
-plt.plot(minErrork, minError, 'o')
-plt.annotate('Min Error: ' + str(minErrork),
-             xy=(minErrork, minError),
-             xytext=(minErrork, minError + 0.01))
-
-plt.show()
-
-
-# Import Data
-results = pd.read_csv('Results_Composite.csv')
-
-resultsShrink = results[results.Season > 2010]
-
-print(results.shape)
-print(resultsShrink.shape)
-
-ratingCoeff = {}
-
-ratingCoeff['basicElo'] = {'initRating': 1300,
-                           'avgRating': 1500,
-                           'kRating': 30,
-                           'regress': 0.3,
-                           'hfAdvantage': 0,
-                           'goalDiffExp': 0}
-
-rankingType = ['basicElo']
+results, rankingDict = rk.game_ranking(results, ratingCoeff, rankingType)
 
 # print(resultsShrink.iterrows())
 
