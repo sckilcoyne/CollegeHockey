@@ -1,184 +1,284 @@
 # -*- coding: utf-8 -*-
 """
-Functions to calculate optimal parameters for ranking systems.
+Functions to calculate rankings.
 
 @author: Scott
 """
 
 # Setup
-
-import ranking as rk
-
 import pandas as pd
 import numpy as np
-# %matplotlib widget
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-# import matplotlib.cbook as cbook
-from pandas.plotting import register_matplotlib_converters
-register_matplotlib_converters()
 
 
-# =============================================================================
-# %matplotlib inline
-# # %matplotlib notebook
-# %matplotlib widget
-# =============================================================================
+# Helper Functions
+
+# Find all teams in database
+def findTeams(results):
+    """
+    todo.
+
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    allTeams = pd.Series(results['Home']).unique()
+    allTeams = np.append(allTeams, pd.Series(results['Away']).unique())
+    allTeams = np.unique(allTeams)
+
+    # print(allTeams)
+    return(allTeams)
 
 
-# Import Data
-results = pd.read_csv('Results_Composite.csv')
+# Initialize rankings for all teams
+def rankingsInit(allTeams, ratingCoeff, rankingType):
+    """
+    todo.
 
-print(results.shape)
+    Parameters
+    ----------
+    allTeams : TYPE
+        DESCRIPTION.
+    ratingCoeff : TYPE
+        DESCRIPTION.
+    rankingType : TYPE
+        DESCRIPTION.
 
-# Initiailize for All Ranking Types
+    Returns
+    -------
+    None.
 
-ratingCoeff = {}
-ratingCoeff['simpleElo'] = {'initRating': 1500,
-                            'avgRating': 1500,
-                            'kRating': 30,
-                            'regress': 0,
-                            'hfAdvantage': 0,
-                            'goalDiffExp': 0}
+    """
+    rankingDict = {}
 
-ratingCoeff['basicElo'] = {'initRating': 1300,
-                           'avgRating': 1500,
-                           'kRating': 30,
-                           'regress': 0.3,
-                           'hfAdvantage': 0,
-                           'goalDiffExp': 0}
+    for x, value in np.ndenumerate(allTeams):
+        # print(value)
+        rankingDict[value] = {
+            rankingType: ratingCoeff[rankingType]['initRating']}
+        # print(x)
 
-ratingCoeff['hfAdvElo'] = {'initRating': 1300,
-                           'avgRating': 1500,
-                           'kRating': 30,
-                           'regress': 0.3,
-                           'hfAdvantage': 30,
-                           'goalDiffExp': 0}
-
-ratingCoeff['fullElo'] = {'initRating': 1300,
-                          'avgRating': 1500,
-                          'kRating': 30,
-                          'regress': 0.3,
-                          'hfAdvantage': 30,
-                          'goalDiffExp': 0.2}
-
-# print(list(ratingCoeff.keys()))
-
-for rankingType in list(ratingCoeff.keys()):
-    results[rankingType + ' Away'] = np.nan
-    results[rankingType + ' Home'] = np.nan
-    results[rankingType + ' Error'] = np.nan
-
-# Run single rankings
-# rankingType = 'simpleElo'
-rankingType = ['basicElo']
-
-results, rankingDict = rk.gameRanking(results, ratingCoeff, rankingType)
-
-# Plot Error of each game
-rankingMethod = rankingType[0]
-
-# https://matplotlib.org/3.1.1/gallery/text_labels_and_annotations/date.html
-years = mdates.YearLocator(10)   # every year, https://matplotlib.org/3.1.1/api/dates_api.html#matplotlib.dates.YearLocator
-months = mdates.MonthLocator()  # every month
-years_fmt = mdates.DateFormatter('%Y')
-
-fig, ax = plt.subplots()
-# plt.plot(results['Date'], results['simpleElo Error'],'.')
-# ax.plot('Date', 'simpleElo Error', data = results)
-dates = results['Date'].to_numpy(dtype='datetime64[ns]')
-ax.plot(dates, results[rankingMethod + ' Error'], '.')
-
-# format the ticks
-ax.xaxis.set_major_locator(years)
-ax.xaxis.set_major_formatter(years_fmt)
-# ax.xaxis.set_minor_locator(months)
-# ax.locator_params(axis='x',nbins=10)
-
-# round to nearest years.
-datemin = np.datetime64(results['Date'][0], 'Y')
-datemax = np.datetime64(np.datetime64(results['Date'].iloc[-1], 'Y') + np.timedelta64(1, 'Y'))
-ax.set_xlim(datemin, datemax)
-
-# format the coords message box
-ax.format_xdata = mdates.DateFormatter('%Y-%m-%d')
-ax.grid(True)
-
-ax.set(xlabel='Date', ylabel='Square Error')
-
-# rotates and right aligns the x labels, and moves the bottom of the
-# axes up to make room for them
-fig.autofmt_xdate()
-
-plt.show()
-
-# Plot Boxplot of error for each season
-rankingMethod = rankingType[0]
-# rankingMethod = 'basicElo'
-
-# results.groupby('Season').boxplot([rankingMethod + ' Error'])
-# results.groupby('Season')
-# print(results.groupby('Season').mean()['basicElo Error'])
-
-plt.plot(results.groupby('Season').median()[rankingMethod + ' Error'])
-plt.plot(results.groupby('Season').mean()[rankingMethod + ' Error'])
-
-# results.boxplot(column = [rankingMethod + ' Error'], by = 'Season')
-
-plt.figure()
-plt.plot(results.groupby('Season').count()[rankingMethod + ' Error'])
-
-# Iterate rankings through K values
-allTeams = rk.findTeams(results)
-rankingDict = rk.rankingsInit(allTeams, rk.initEloSimple)
-eloError = pd.DataFrame(columns=['k', 'Elo_Error'])
-
-for k in range(10, 60, 10):
-    results, rankingDict = rk.gameRanking(results, rankingDict, k)
-#     print(k)
-    averageError = results['simpleElo Error'].mean()
-#     print(averageError)
-    eloError = eloError.append({'k': k, 'Elo_Error': averageError},
-                               ignore_index=True)
-
-eloError.plot(x='k', y='Elo_Error')
-
-minErroridx = eloError['Elo_Error'].idxmin()
-minError = eloError['Elo_Error'][minErroridx]
-minErrork = eloError['k'][minErroridx]
-plt.plot(minErrork, minError, 'o')
-plt.annotate('Min Error: ' + str(minErrork),
-             xy=(minErrork, minError),
-             xytext=(minErrork, minError + 0.01))
-
-plt.show()
+    # print(rankingDict)
+    return(rankingDict)
 
 
-# Import Data
-results = pd.read_csv('Results_Composite.csv')
+# Ranking Formulas
+# Simple Elo: no HF, no GD
+def elo_simple(homeElo, awayElo, goalDiff, k):
+    """
+    todo.
 
-resultsShrink = results[results.Season > 2010]
+    Parameters
+    ----------
+    homeElo : TYPE
+        DESCRIPTION.
+    awayElo : TYPE
+        DESCRIPTION.
+    goalDiff : TYPE
+        DESCRIPTION.
+    k : TYPE
+        DESCRIPTION.
 
-print(results.shape)
-print(resultsShrink.shape)
+    Returns
+    -------
+    None.
 
-ratingCoeff = {}
+    """
+    if goalDiff > 0:
+        result = 1
+    elif goalDiff < 0:
+        result = 0
+    else:
+        result = 0.5
 
-ratingCoeff['basicElo'] = {'initRating': 1300,
-                           'avgRating': 1500,
-                           'kRating': 30,
-                           'regress': 0.3,
-                           'hfAdvantage': 0,
-                           'goalDiffExp': 0}
+    Qa = pow(10, homeElo/400)
+    Qb = pow(10, awayElo/400)
+    Ea = Qa / (Qa + Qb)
+#     Eb = Qb / (Qa + Qb)
 
-rankingType = ['basicElo']
+    deltaElo = round(k * (result - Ea), 2)
+    predictError = (result - Ea) ** 2
 
-# print(resultsShrink.iterrows())
+    homeElo_adj = round(homeElo + deltaElo, 2)
+    awayElo_adj = round(awayElo - deltaElo, 2)
 
-# for row in resultsShrink.itertuples(index=False):
-# for index, row in enumerate(resultsShrink.itertuples(index=False)):
-# #     season = resultsShrink.Season[row]
-# #     print('Index: ' + str(row) + '  Season: ' + str(season))
-#     print('Index: ' + str(index))
+#     print('Qa: ', Qa, ' Qb: ', Qb, ' Ea: ', Ea, ' Eb: ', Eb, ' homeElo_adj: ', homeElo_adj, ' awayElo_adj: ',awayElo_adj)
 
-# optimizeElo(resultsShrink, ratingCoeff, rankingType)
+    return (homeElo_adj, awayElo_adj, predictError)
+
+
+def ratingElo(homeElo, awayElo, goalDiff, ratingCoeffMethod):
+    """
+    todo.
+
+    Parameters
+    ----------
+    homeElo : TYPE
+        DESCRIPTION.
+    awayElo : TYPE
+        DESCRIPTION.
+    goalDiff : TYPE
+        DESCRIPTION.
+    ratingCoeffMethod : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    k = ratingCoeffMethod['kRating']
+    hfAdv = ratingCoeffMethod['hfAdvantage']
+
+    if goalDiff > 0:
+        result = 1
+    elif goalDiff < 0:
+        result = 0
+    else:
+        result = 0.5
+
+    Qa = pow(10, (homeElo + hfAdv)/400)
+    Qb = pow(10, awayElo/400)
+    Ea = Qa / (Qa + Qb)
+#     Eb = Qb / (Qa + Qb)
+
+    deltaElo = round(k * (result - Ea), 2)
+    predictError = (result - Ea) ** 2
+
+    homeElo_adj = round(homeElo + deltaElo, 2)
+    awayElo_adj = round(awayElo - deltaElo, 2)
+
+#     print('Qa: ', Qa, ' Qb: ', Qb, ' Ea: ', Ea, ' Eb: ', Eb, ' homeElo_adj: ', homeElo_adj, ' awayElo_adj: ',awayElo_adj)
+
+    return (homeElo_adj, awayElo_adj, predictError)
+
+
+# Regress Rankings at Season Start
+def seasonStart(results, rankingDict, ratingCoeff, rankingType, season,
+                allTeams):
+    """
+    todo.
+
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+    rankingDict : TYPE
+        DESCRIPTION.
+    ratingCoeff : TYPE
+        DESCRIPTION.
+    rankingType : TYPE
+        DESCRIPTION.
+    season : TYPE
+        DESCRIPTION.
+    allTeams : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    seasonGames = results[results.Season == season]
+
+    seasonTeams = pd.concat([seasonGames['Home'], seasonGames['Away']]).unique()
+
+    # print(seasonGames)
+#     print(seasonTeams)
+
+    regress = ratingCoeff[rankingType]['regress']
+    avgRating = ratingCoeff[rankingType]['avgRating']
+
+    for team in allTeams:
+        # if play this season and last, regress
+        if team in seasonTeams:
+            currentRating = rankingDict[team][rankingType]
+            rankingDict[team][rankingType] = round(currentRating - (regress * (currentRating - avgRating)), 2)
+    #         print(team + " played in " + str(season) + '. Regressed from ' + str(currentRating) + ' to ' + str(rankingDict[team][rankingType]))
+
+        # if don't play this season, reset
+        else:
+            rankingDict[team][rankingType] = ratingCoeff[rankingType]['initRating']
+    #         print(team + " reverted to " + str(ratingCoeff[rankingType]['initRating']))
+
+    return(rankingDict)
+
+
+# Calculate rankings for each match
+def gameRanking(results, ratingCoeff, rankingType):
+    """
+    todo.
+
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+    ratingCoeff : TYPE
+        DESCRIPTION.
+    rankingType : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    allTeams = findTeams(results)
+
+    for index, row in enumerate(results.itertuples(index=False)):
+        # print(row)
+        # season = results.Season[index]
+        season = row.Season
+#         print('Index: ' + str(index) + '  Season: ' + str(season))
+        for rankingMethod in rankingType:
+            if index == 0:
+                rankingDict = rankingsInit(allTeams, ratingCoeff,
+                                           rankingMethod)
+                seasonLast = season
+                print('Start ranking ' + str(season))
+    #         elif (results[index].season - results[index - 1].season) > 0:
+#             elif (results.Season[index] - results.Season[index - 1]) > 0:
+            elif (season - seasonLast) > 0:
+                rankingDict = seasonStart(results, rankingDict, ratingCoeff,
+                                          rankingMethod, season, allTeams)
+                seasonLast = season
+    #             print(str(season))
+
+            teamAway = row.Away
+            teamHome = row.Home
+
+            eloAway = rankingDict.get(teamAway, {}).get(rankingMethod)
+            eloHome = rankingDict.get(teamHome, {}).get(rankingMethod)
+
+#             goalDiff = row['Home Score'] - row['Away Score']
+            goalDiff = row[5] - row[2]
+
+            if 'Elo' in rankingMethod:
+                [eloHome, eloAway, predictError] = ratingElo(eloHome, eloAway,
+                                                             goalDiff,
+                                                             ratingCoeff[rankingMethod])
+            else:
+                raise ValueError('Unknown Ranking Method.')
+
+#         [eloHome, eloAway, predictError] = elo_simple(eloHome, eloAway, goalDiff, ratingCoeff[rankingType]['kRating'])
+
+            # Update Current Elo Tracker
+            rankingDict[teamAway][rankingMethod] = eloAway
+            rankingDict[teamHome][rankingMethod] = eloHome
+
+            # Add Updated Elo to Results table
+            results.loc[index, rankingMethod + ' Away'] = eloAway
+            results.loc[index, rankingMethod + ' Home'] = eloHome
+            results.loc[index, rankingMethod + ' Error'] = predictError
+
+        # print(teamAway,', ', teamHome)
+        # print(rankingDict[teamAway]['Elo_Simple'],', ',rankingDict[teamHome]['Elo_Simple'])
+
+    # Write to CSV
+    results.to_csv(path_or_buf='Results_Rankings.csv', index='False')
+
+    return (results, rankingDict)

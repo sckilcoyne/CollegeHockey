@@ -11,7 +11,7 @@ import numpy as np
 import time
 
 
-def downloadCHN(yearStart=1900, yearEnd=2019):
+def download_results_CHN(yearStart=1900, yearEnd=2020):
     """
     Download results from CHN.
 
@@ -20,7 +20,7 @@ def downloadCHN(yearStart=1900, yearEnd=2019):
     yearStart : TYPE, optional
         DESCRIPTION. The default is 1900.
     yearEnd : TYPE, optional
-        DESCRIPTION. The default is 2019.
+        DESCRIPTION. The default is 2020.
 
     Returns
     -------
@@ -55,7 +55,7 @@ def downloadCHN(yearStart=1900, yearEnd=2019):
     chn_composite.to_csv(path_or_buf='CHN_Raw.csv', index=False)
 
 
-def cleanResults(fileName='CHN_Raw.csv'):
+def clean_results(fileName='CHN_Raw.csv'):
     """
     Clean up downloaded results from CHN.
 
