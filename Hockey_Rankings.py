@@ -2,6 +2,11 @@
 """
 Setup workspace.
 
+Sources:
+    https://en.wikipedia.org/wiki/Elo_rating_system#Mathematical_details
+    http://hockeyanalytics.com/2016/07/elo-ratings-for-the-nhl/
+
+
 @author: Scott
 """
 
@@ -10,6 +15,7 @@ Setup workspace.
 import Rankings as rk
 import Rankings_Optimize as rkopt
 import Ranking_Plots as rkplt
+import Ranking_Coefficients
 
 import pandas as pd
 import numpy as np
@@ -53,60 +59,34 @@ def results_shrink(results, startYear=2010, endYear=2019):
     """
     resultsShrink = results[results.Season >= startYear]
 
-    print(results.shape)
-    print(resultsShrink.shape)
+    print('Results limited to ', str(startYear), ' through ', str(endYear))
+    print('Results shape: ', resultsShrink.shape)
     return resultsShrink
 
 
-# Initiailize for All Ranking Types
-ratingCoeff = {}
-ratingCoeff['simpleElo'] = {'initRating': 1500,
-                            'avgRating': 1500,
-                            'kRating': 30,
-                            'regress': 0,
-                            'hfAdvantage': 0,
-                            'goalDiffExp': 0}
+ratingCoeff = Ranking_Coefficients.coefficients()
 
-ratingCoeff['basicElo'] = {'initRating': 1300,
-                           'avgRating': 1500,
-                           'kRating': 30,
-                           'regress': 0.3,
-                           'hfAdvantage': 0,
-                           'goalDiffExp': 0}
-
-ratingCoeff['hfAdvElo'] = {'initRating': 1300,
-                           'avgRating': 1500,
-                           'kRating': 30,
-                           'regress': 0.3,
-                           'hfAdvantage': 30,
-                           'goalDiffExp': 0}
-
-ratingCoeff['fullElo'] = {'initRating': 1300,
-                          'avgRating': 1500,
-                          'kRating': 30,
-                          'regress': 0.3,
-                          'hfAdvantage': 30,
-                          'goalDiffExp': 0.2}
-
-# print(list(ratingCoeff.keys()))
-
-for rankingType in list(ratingCoeff.keys()):
-    results[rankingType + ' Away'] = np.nan
-    results[rankingType + ' Home'] = np.nan
-    results[rankingType + ' Error'] = np.nan
+# for rankingType in list(ratingCoeff.keys()):
+#     results[rankingType + ' Away'] = np.nan
+#     results[rankingType + ' Home'] = np.nan
+#     results[rankingType + ' Error'] = np.nan
 
 # Run single rankings
-# rankingType = 'simpleElo'
-rankingType = ['basicElo']
+rankingType = ['simpleElo']
+# rankingType = ['basicElo']
+
+results = results_shrink(results)
+
+for rankType in rankingType:
+    results[rankType + ' Away'] = np.nan
+    results[rankType + ' Home'] = np.nan
+    results[rankType + ' Error'] = np.nan
 
 results, rankingDict = rk.game_ranking(results, ratingCoeff, rankingType)
 
-# print(resultsShrink.iterrows())
 
-# for row in resultsShrink.itertuples(index=False):
-# for index, row in enumerate(resultsShrink.itertuples(index=False)):
-# #     season = resultsShrink.Season[row]
-# #     print('Index: ' + str(row) + '  Season: ' + str(season))
-#     print('Index: ' + str(index))
+# %% Optimization
 
-# optimizeElo(resultsShrink, ratingCoeff, rankingType)
+resultsShrink = results_shrink(results)
+
+rkopt.optimizeElo(resultsShrink, ratingCoeff, rankingType)

@@ -10,82 +10,115 @@ import pandas as pd
 import numpy as np
 
 
-# Find all teams in database
-def find_teams(results):
+def find_teams(results, debug=False):
     """
-    todo.
+    Create a list of all teams in results database.
 
     Parameters
     ----------
     results : TYPE
-        DESCRIPTION.
+        Game results database.
 
     Returns
     -------
-    None.
+    allTeams : numpy list
+        List of unique teams in database.
 
     """
+    if debug:
+        print('find_teams in Debug mode.')
+
     allTeams = pd.Series(results['Home']).unique()
+    if debug:
+        print('Home teams: ' + len(allTeams))
+
     allTeams = np.append(allTeams, pd.Series(results['Away']).unique())
+    if debug:
+        print('Home and Away teams: ' + len(allTeams))
+
     allTeams = np.unique(allTeams)
+    if debug:
+        print('Unique teams: ' + len(allTeams))
 
     # print(allTeams)
+    print(str(len(allTeams)) + ' unique teams.')
     return(allTeams)
 
 
-# Initialize rankings for all teams
-def rankings_init(allTeams, ratingCoeff, rankingType):
+def rankings_init(allTeams, ratingCoeff, rankingType, debug=False):
     """
-    todo.
+    Initialize rankings for all teams.
 
     Parameters
     ----------
-    allTeams : TYPE
-        DESCRIPTION.
-    ratingCoeff : TYPE
-        DESCRIPTION.
-    rankingType : TYPE
-        DESCRIPTION.
+    allTeams : numpy list
+        List of unique teams in database.
+    ratingCoeff : dict
+        Dict of parameters for each possible ranking system.
+    rankingType : list
+        List of which ranking systems to initialize for.
 
     Returns
     -------
-    None.
+    rankingDict : dict
+        Each team and their current ranking for each ranking system.
 
     """
+    if debug:
+        print('rankings_init in Debug mode.')
+        print(rankingType)
+
     rankingDict = {}
 
-    for x, value in np.ndenumerate(allTeams):
-        # print(value)
-        rankingDict[value] = {
-            rankingType: ratingCoeff[rankingType]['initRating']}
-        # print(x)
+    for x, team in np.ndenumerate(allTeams):
+        if debug:
+            print('x: ' + str(x))
+            print('value: ' + str(team))
 
-    # print(rankingDict)
+        rankingDict[team] = {
+            'gameCount': 0,
+            rankingType: ratingCoeff[rankingType]['initRating']}
+
+    if debug:
+        print(rankingDict)
+
     return(rankingDict)
 
 
 # Ranking Formulas
-# Simple Elo: no HF, no GD
-def elo_simple(homeElo, awayElo, goalDiff, k):
+def elo_simple(homeElo, awayElo, goalDiff, k, debug=False):
     """
-    todo.
+    Elo ranking system based only on wins.
+
+    No Homefield Advantage.
+    No Goal Diferential.
+    No season regression.
 
     Parameters
     ----------
-    homeElo : TYPE
-        DESCRIPTION.
-    awayElo : TYPE
-        DESCRIPTION.
-    goalDiff : TYPE
-        DESCRIPTION.
-    k : TYPE
-        DESCRIPTION.
+    homeElo : float
+        Elo Rating of home team.
+    awayElo : float
+        Elo Rating of away team.
+    goalDiff : Int
+        Goal difference of game (Home - Away)
+    k : Int
+        Elo k-factor.
 
     Returns
     -------
-    None.
+    homeElo_adj : float
+        Adjustment to home team's elo
+    awayElo_adj : float
+        Adjustment to away team's elo
+    predictError : float
+        Prediction error as a Brier score for event
 
     """
+    if debug:
+        print('elo_simple in debug mode')
+
+    # Determine winner of game
     if goalDiff > 0:
         result = 1
     elif goalDiff < 0:
@@ -93,45 +126,71 @@ def elo_simple(homeElo, awayElo, goalDiff, k):
     else:
         result = 0.5
 
-    Qa = pow(10, homeElo/400)
-    Qb = pow(10, awayElo/400)
+    # Calutlate expected match score
+    Qa = pow(10, homeElo / 400)
+    Qb = pow(10, awayElo / 400)
     Ea = Qa / (Qa + Qb)
-#     Eb = Qb / (Qa + Qb)
+    Eb = Qb / (Qa + Qb)
 
+    # Change in Elo ratings
     deltaElo = round(k * (result - Ea), 2)
+
+    # Expected match score error
     predictError = (result - Ea) ** 2
 
+    # Adjust Elo ratings of each team based on result
     homeElo_adj = round(homeElo + deltaElo, 2)
     awayElo_adj = round(awayElo - deltaElo, 2)
 
-#     print('Qa: ', Qa, ' Qb: ', Qb, ' Ea: ', Ea, ' Eb: ', Eb, ' homeElo_adj: ', homeElo_adj, ' awayElo_adj: ',awayElo_adj)
+    if debug:
+        print('Qa: ', Qa,
+              ' Qb: ', Qb,
+              ' Ea: ', Ea,
+              ' Eb: ', Eb,
+              ' homeElo_adj: ', homeElo_adj,
+              ' awayElo_adj: ', awayElo_adj)
 
     return (homeElo_adj, awayElo_adj, predictError)
 
 
-def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod):
+def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod, debug=False):
     """
-    todo.
+    Elo ranking system.
+
+    Includes Homefield Advantage.
 
     Parameters
     ----------
-    homeElo : TYPE
-        DESCRIPTION.
-    awayElo : TYPE
-        DESCRIPTION.
-    goalDiff : TYPE
-        DESCRIPTION.
+    homeElo : float
+        Elo Rating of home team.
+    awayElo : float
+        Elo Rating of away team.
+    goalDiff : Int
+        Goal difference of game (Home - Away)
     ratingCoeffMethod : TYPE
-        DESCRIPTION.
+        DESCRIPTION
 
     Returns
     -------
-    None.
+    homeElo_adj : float
+        Adjustment to home team's elo
+    awayElo_adj : float
+        Adjustment to away team's elo
+    predictError : float
+        Prediction error as a Brier score for event
+
 
     """
-    k = ratingCoeffMethod['kRating']
-    hfAdv = ratingCoeffMethod['hfAdvantage']
+    if debug:
+        print('rating_elo in debug mode.')
+        print(ratingCoeffMethod)
 
+    k = ratingCoeffMethod['kRating']
+    hfAdv = ratingCoeffMethod['hfAdvantage']  # Home Team
+    hiAdv = ratingCoeffMethod['hiAdvantage']  # Home Ice
+    goalDiffExp = ratingCoeffMethod['goalDiffExp']
+
+    # Determine winner of game
     if goalDiff > 0:
         result = 1
     elif goalDiff < 0:
@@ -139,27 +198,37 @@ def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod):
     else:
         result = 0.5
 
-    Qa = pow(10, (homeElo + hfAdv)/400)
-    Qb = pow(10, awayElo/400)
+    # Calutlate expected match score
+    Qa = pow(10, (homeElo + hfAdv + hiAdv) / 400)
+    Qb = pow(10, awayElo / 400)
     Ea = Qa / (Qa + Qb)
-#     Eb = Qb / (Qa + Qb)
+    Eb = Qb / (Qa + Qb)
 
+    # Change in Elo ratings
     deltaElo = round(k * (result - Ea), 2)
+
+    # Expected match score error
     predictError = (result - Ea) ** 2
 
+    # Adjust Elo ratings of each team based on result
     homeElo_adj = round(homeElo + deltaElo, 2)
     awayElo_adj = round(awayElo - deltaElo, 2)
 
-#     print('Qa: ', Qa, ' Qb: ', Qb, ' Ea: ', Ea, ' Eb: ', Eb, ' homeElo_adj: ', homeElo_adj, ' awayElo_adj: ',awayElo_adj)
+    if debug:
+        print('Qa: ', Qa,
+              ' Qb: ', Qb,
+              ' Ea: ', Ea,
+              ' Eb: ', Eb,
+              ' homeElo_adj: ', homeElo_adj,
+              ' awayElo_adj: ', awayElo_adj)
 
     return (homeElo_adj, awayElo_adj, predictError)
 
 
-# Regress Rankings at Season Start
 def season_start(results, rankingDict, ratingCoeff, rankingType, season,
-                 allTeams):
+                 allTeams, debug=False):
     """
-    todo.
+    Regress Rankings at Season Start.
 
     Parameters
     ----------
@@ -178,15 +247,20 @@ def season_start(results, rankingDict, ratingCoeff, rankingType, season,
 
     Returns
     -------
-    None.
+    rankingDict : TYPE
+        DESCRIPTION.
 
     """
+    if debug:
+        print('season_start in debug mode.')
+
     seasonGames = results[results.Season == season]
 
     seasonTeams = pd.concat([seasonGames['Home'], seasonGames['Away']]).unique()
 
-    # print(seasonGames)
-#     print(seasonTeams)
+    if debug:
+        print(seasonGames)
+        print(seasonTeams)
 
     regress = ratingCoeff[rankingType]['regress']
     avgRating = ratingCoeff[rankingType]['avgRating']
@@ -196,20 +270,25 @@ def season_start(results, rankingDict, ratingCoeff, rankingType, season,
         if team in seasonTeams:
             currentRating = rankingDict[team][rankingType]
             rankingDict[team][rankingType] = round(currentRating - (regress * (currentRating - avgRating)), 2)
-    #         print(team + " played in " + str(season) + '. Regressed from ' + str(currentRating) + ' to ' + str(rankingDict[team][rankingType]))
+            if debug:
+                print(team + ' played in ' + str(season) +
+                      '. Regressed from ' + str(currentRating) +
+                      ' to ' + str(rankingDict[team][rankingType]))
 
         # if don't play this season, reset
         else:
-            rankingDict[team][rankingType] = ratingCoeff[rankingType]['initRating']
-    #         print(team + " reverted to " + str(ratingCoeff[rankingType]['initRating']))
+            initRating = ratingCoeff[rankingType]['initRating']
+            rankingDict[team][rankingType] = initRating
+            if debug:
+                print(team + " reverted to " +
+                      str(ratingCoeff[rankingType]['initRating']))
 
     return(rankingDict)
 
 
-# Calculate rankings for each match
-def game_ranking(results, ratingCoeff, rankingType):
+def game_ranking(results, ratingCoeff, rankingType, debug=False):
     """
-    todo.
+    Calculate rankings for each match.
 
     Parameters
     ----------
@@ -222,49 +301,79 @@ def game_ranking(results, ratingCoeff, rankingType):
 
     Returns
     -------
-    None.
+    results : TYPE
+        DESCRIPTION.
+    rankingDict : TYPE
+        DESCRIPTION.
 
     """
+    if debug == 'verbose':
+        debugVerbose = True
+        debug = True
+    else:
+        debugVerbose = False
+
+    if debug:
+        print('game_ranking in debug mode.')
+        print(rankingType)
+
     allTeams = find_teams(results)
 
+    # Evaluate each game for given ranking methods
+    print('Start scoring each game')
     for index, row in enumerate(results.itertuples(index=False)):
-        # print(row)
-        # season = results.Season[index]
+        # if debugVerbose:
+        #     print('Index: ' + str(index) + '\nRow:')
+        #     print(row)
+
         season = row.Season
-#         print('Index: ' + str(index) + '  Season: ' + str(season))
+
+        if debugVerbose:
+            print('Index: ' + str(index) + '  Season: ' + str(season))
+
         for rankingMethod in rankingType:
+            # Intitialize first season
             if index == 0:
                 rankingDict = rankings_init(allTeams, ratingCoeff,
                                             rankingMethod)
                 seasonLast = season
-                print('Start ranking ' + str(season))
-    #         elif (results[index].season - results[index - 1].season) > 0:
-#             elif (results.Season[index] - results.Season[index - 1]) > 0:
+
+                if debug:
+                    print('First season initialized.')
+
+            # Initialize new seasons
             elif (season - seasonLast) > 0:
                 rankingDict = season_start(results, rankingDict, ratingCoeff,
                                            rankingMethod, season, allTeams)
                 seasonLast = season
-    #             print(str(season))
 
+                if debug:
+                    print(str(season) + ' season initialized')
+
+            # Home and Away teams
             teamAway = row.Away
             teamHome = row.Home
 
+            # Home and Away teams' ratings
             eloAway = rankingDict.get(teamAway, {}).get(rankingMethod)
             eloHome = rankingDict.get(teamHome, {}).get(rankingMethod)
 
 #             goalDiff = row['Home Score'] - row['Away Score']
             goalDiff = row[5] - row[2]
 
+            # Choose ranking function based on method
             if 'Elo' in rankingMethod:
-                [eloHome, eloAway, predictError] = rating_elo(eloHome, eloAway,
+                rateCoeff = ratingCoeff[rankingMethod]
+                [eloHome, eloAway, predictError] = rating_elo(eloHome,
+                                                              eloAway,
                                                               goalDiff,
-                                                              ratingCoeff[rankingMethod])
+                                                              rateCoeff)
             else:
                 raise ValueError('Unknown Ranking Method.')
 
 #         [eloHome, eloAway, predictError] = elo_simple(eloHome, eloAway, goalDiff, ratingCoeff[rankingType]['kRating'])
 
-            # Update Current Elo Tracker
+            # Update Current Ranking Tracker
             rankingDict[teamAway][rankingMethod] = eloAway
             rankingDict[teamHome][rankingMethod] = eloHome
 
@@ -273,10 +382,15 @@ def game_ranking(results, ratingCoeff, rankingType):
             results.loc[index, rankingMethod + ' Home'] = eloHome
             results.loc[index, rankingMethod + ' Error'] = predictError
 
-        # print(teamAway,', ', teamHome)
-        # print(rankingDict[teamAway]['Elo_Simple'],', ',rankingDict[teamHome]['Elo_Simple'])
+        # Increment game counter
+        awayCount = rankingDict[teamAway]['gameCount'] + 1
+        homeCount = rankingDict[teamHome]['gameCount'] + 1
+        rankingDict[teamAway]['gameCount'] = awayCount
+        rankingDict[teamHome]['gameCount'] = homeCount
 
     # Write to CSV
-    results.to_csv(path_or_buf='Results_Rankings.csv', index='False')
+    path_or_buf = 'Results_Rankings.csv'
+    results.to_csv(path_or_buf=path_or_buf, index='False')
+    print('Results saved to ' + path_or_buf)
 
     return (results, rankingDict)
