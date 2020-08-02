@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['ranking.py']
+recent_files = ['Rankings.py', 'Hockey_Rankings.py', 'Rankings_Optimize.py', 'Import_Results.py', 'Ranking_Plots.py']
 
