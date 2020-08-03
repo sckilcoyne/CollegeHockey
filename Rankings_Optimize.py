@@ -6,15 +6,29 @@ Functions to calculate optimal parameters for ranking systems.
 """
 
 import Rankings as rk
+import Import_Results as ir
+import Ranking_Coefficients
 
 import pandas as pd
 # import numpy as np
 import matplotlib.pyplot as plt
-# from scipy.optimize import minimize
+from scipy.optimize
 # from importlib import reload
 # reload(rk)
 
 
+def ranking_error(results, ratingCoeff, rankType):
+    # Run ranking with given coefficients
+    results, rankingDict = rk.game_ranking(results, ratingCoeff, rankType)
+    
+    # Get average error of all results
+    errorCol = rankType + '_Error'
+    # errorMedian = results[errorCol].median()
+    errorMean = results[errorCol].mean()
+    
+    return errorMean
+        
+        
 def optimize_elo(results, ratingCoeff, rankingType):
     """
     Calculate optimal parameters for Elo ranking.
@@ -33,20 +47,7 @@ def optimize_elo(results, ratingCoeff, rankingType):
     None.
 
     """
-    results, rankingDict = rk.gameRanking(results, ratingCoeff, rankingType)
-    errorCol = rankingType[0] + ' Error'
-    print(errorCol)
-    eloErrorList = results[results.Season > 2010]
-    print(eloErrorList.columns)
-    eloErrorMedian = eloErrorList[errorCol].median()
-    print(eloErrorList.shape)
-    print(eloErrorMedian)
-    print(eloErrorList[errorCol])
-
-#     eloErrorList = results[results.Season > 2015]
-#     eloErrorMedian = eloErrorList[errorCol].median()
-#     print(eloErrorList.shape)
-#     print(eloErrorMedian)
+    optimize.basinhopping(ranking_error
 
 
 def k_finder(results):
@@ -87,3 +88,17 @@ def k_finder(results):
                  xytext=(minErrork, minError + 0.01))
 
     plt.show()
+
+# %% Optimization
+
+# Import Data
+resultsFull = pd.read_csv('Results_Composite.csv')
+print('Results shape: ', resultsFull.shape)
+
+# Setup
+ratingCoeff = Ranking_Coefficients.coefficients()
+rankingType = ['simpleElo']
+results = ir.results_shrink(resultsFull.copy(), 2010, 2011)
+
+# Run Optimization
+optimize_elo(results, ratingCoeff, rankingType)

@@ -75,7 +75,7 @@ def clean_results(fileName='CHN_Raw.csv'):
 
     # Clean up data
 
-    headers = ['Away', 'Away Score', 'Location', 'Home', 'Home Score',
+    headers = ['Away', 'Away_Score', 'Location', 'Home', 'Home_Score',
                'OT', 'nan', 'Notes']
 
     # Remove all the extra columns
@@ -101,8 +101,8 @@ def clean_results(fileName='CHN_Raw.csv'):
     results_cleaned = results_cleaned.reset_index(drop=True)
 
     # Clean games without scores
-    scorelessGamesAway = pd.isnull(results_cleaned['Away Score'])
-    scorelessGamesHome = pd.isnull(results_cleaned['Home Score'])
+    scorelessGamesAway = pd.isnull(results_cleaned['Away_Score'])
+    scorelessGamesHome = pd.isnull(results_cleaned['Home_Score'])
     scorelessGames = scorelessGamesAway | scorelessGamesHome
     missingScores = np.where(scorelessGames)[0]
     # print(missingScores)
@@ -111,12 +111,12 @@ def clean_results(fileName='CHN_Raw.csv'):
     # print(results_cleaned.shape)
 
     # Determine Conference
-    conf_isdigit = results_cleaned['Away Score'].str.isdigit()
+    conf_isdigit = results_cleaned['Away_Score'].str.isdigit()
     conf_isdigit = conf_isdigit.fillna(False)
     # print(conf_isdigit.unique())
 
     conf_isdigit = ~conf_isdigit
-    conf_score = results_cleaned['Away Score']
+    conf_score = results_cleaned['Away_Score']
     # print(conf_isdigit)
     conf = conf_score[conf_isdigit]
     # print(type(conf))
@@ -137,3 +137,30 @@ def clean_results(fileName='CHN_Raw.csv'):
 
     # Write to CSV
     results_cleaned.to_csv(path_or_buf='Results_Composite.csv', index='False')
+
+
+def results_shrink(results, startYear=2010, endYear=2019):
+    """
+    Select a subsection of all results.
+
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+    startYear : TYPE, optional
+        Season start of selection. The default is 2010.
+    endYear : TYPE, optional
+        Season start of end of selection. The default is 2019.
+
+    Returns
+    -------
+    resultsShrink : TYPE
+        Subsection of results.
+
+    """
+    resultsShrink = results[(results.Season >= startYear) &
+                            (results.Season <= endYear)]
+
+    print('Results limited to ', str(startYear), ' through ', str(endYear))
+    print('Results shape: ', resultsShrink.shape)
+    return resultsShrink

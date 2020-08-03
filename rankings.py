@@ -319,17 +319,19 @@ def game_ranking(results, ratingCoeff, rankingType, debug=False):
 
     allTeams = find_teams(results)
 
+    for rankType in rankingType:
+        results[rankType + '_Away'] = np.nan
+        results[rankType + '_Home'] = np.nan
+        results[rankType + '_Error'] = np.nan
+
     # Evaluate each game for given ranking methods
     print('Start scoring each game')
-    for index, row in enumerate(results.itertuples(index=False)):
-        # if debugVerbose:
-        #     print('Index: ' + str(index) + '\nRow:')
-        #     print(row)
-
+    for index, row in enumerate(results.itertuples(index=True)):
         season = row.Season
 
         if debugVerbose:
             print('Index: ' + str(index) + '  Season: ' + str(season))
+            print(row)
 
         for rankingMethod in rankingType:
             # Intitialize first season
@@ -358,8 +360,8 @@ def game_ranking(results, ratingCoeff, rankingType, debug=False):
             eloAway = rankingDict.get(teamAway, {}).get(rankingMethod)
             eloHome = rankingDict.get(teamHome, {}).get(rankingMethod)
 
-#             goalDiff = row['Home Score'] - row['Away Score']
-            goalDiff = row[5] - row[2]
+            goalDiff = row.Home_Score - row.Away_Score
+            # goalDiff = row[5] - row[2]
 
             # Choose ranking function based on method
             if 'Elo' in rankingMethod:
@@ -378,9 +380,9 @@ def game_ranking(results, ratingCoeff, rankingType, debug=False):
             rankingDict[teamHome][rankingMethod] = eloHome
 
             # Add Updated Elo to Results table
-            results.loc[index, rankingMethod + ' Away'] = eloAway
-            results.loc[index, rankingMethod + ' Home'] = eloHome
-            results.loc[index, rankingMethod + ' Error'] = predictError
+            results.at[row.Index, rankingMethod + '_Away'] = eloAway
+            results.at[row.Index, rankingMethod + '_Home'] = eloHome
+            results.at[row.Index, rankingMethod + '_Error'] = predictError
 
         # Increment game counter
         awayCount = rankingDict[teamAway]['gameCount'] + 1
