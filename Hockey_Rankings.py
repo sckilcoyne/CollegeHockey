@@ -36,10 +36,6 @@ rankingType = ['simpleElo']
 
 results = ir.results_shrink(resultsFull.copy(), 2010, 2010)
 
-# for rankType in rankingType:
-#     results[rankType + ' Away'] = np.nan
-#     results[rankType + ' Home'] = np.nan
-#     results[rankType + ' Error'] = np.nan
 
 debug = [False, True, 'verbose']
 

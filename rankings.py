@@ -77,7 +77,7 @@ def rankings_init(allTeams, ratingCoeff, rankingType, debug=False):
 
         rankingDict[team] = {
             'gameCount': 0,
-            rankingType: ratingCoeff[rankingType]['initRating']}
+            rankingType: ratingCoeff[rankingType]['avgRating']}
 
     if debug:
         print(rankingDict)
@@ -286,7 +286,8 @@ def season_start(results, rankingDict, ratingCoeff, rankingType, season,
     return(rankingDict)
 
 
-def game_ranking(results, ratingCoeff, rankingType, debug=False):
+def game_ranking(results, ratingCoeff, rankingType,
+                 debug=False, saveResults=True):
     """
     Calculate rankings for each match.
 
@@ -391,8 +392,9 @@ def game_ranking(results, ratingCoeff, rankingType, debug=False):
         rankingDict[teamHome]['gameCount'] = homeCount
 
     # Write to CSV
-    path_or_buf = 'Results_Rankings.csv'
-    results.to_csv(path_or_buf=path_or_buf, index='False')
-    print('Results saved to ' + path_or_buf)
+    if saveResults:
+        path_or_buf = 'Results_Rankings.csv'
+        results.to_csv(path_or_buf=path_or_buf, index='False')
+        print('Results saved to ' + path_or_buf)
 
     return (results, rankingDict)

@@ -10,16 +10,31 @@ import Import_Results as ir
 import Ranking_Coefficients
 
 import pandas as pd
-# import numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize
+import scipy.optimize as opt
 # from importlib import reload
 # reload(rk)
 
+# Import Data
+resultsFull = pd.read_csv('Results_Composite.csv')
+print('Results shape: ', resultsFull.shape)
+results = ir.results_shrink(resultsFull.copy(), 2000, 2019)
 
-def ranking_error(results, ratingCoeff, rankType):
+def ranking_error(values, rankType):
+    global results
+    ratingCoeff = {}
+    ratingCoeff[rankType] = {'initRating': values[1],
+                             'avgRating': 1500,
+                             'kRating': values[0],
+                             'regress': values[2],
+                             'hfAdvantage': 0,
+                             'hiAdvantage': 0,
+                             'goalDiffExp': 0}
+    
     # Run ranking with given coefficients
-    results, rankingDict = rk.game_ranking(results, ratingCoeff, rankType)
+    results, rankingDict = rk.game_ranking(results, ratingCoeff, [rankType],
+                                           False, False)
     
     # Get average error of all results
     errorCol = rankType + '_Error'
@@ -29,7 +44,7 @@ def ranking_error(results, ratingCoeff, rankType):
     return errorMean
         
         
-def optimize_elo(results, ratingCoeff, rankingType):
+def optimize_elo(ratingCoeff, rankType):
     """
     Calculate optimal parameters for Elo ranking.
 
@@ -47,7 +62,11 @@ def optimize_elo(results, ratingCoeff, rankingType):
     None.
 
     """
-    optimize.basinhopping(ranking_error
+    x0  = np.array([30, 1300, 0.3])
+    res = opt.minimize(ranking_error, x0, args=(rankType), method='nelder-mead')
+    
+    print(res)
+    return res
 
 
 def k_finder(results):
@@ -91,14 +110,10 @@ def k_finder(results):
 
 # %% Optimization
 
-# Import Data
-resultsFull = pd.read_csv('Results_Composite.csv')
-print('Results shape: ', resultsFull.shape)
-
 # Setup
 ratingCoeff = Ranking_Coefficients.coefficients()
-rankingType = ['simpleElo']
-results = ir.results_shrink(resultsFull.copy(), 2010, 2011)
+rankingType = ['optimizeElo']
+
 
 # Run Optimization
-optimize_elo(results, ratingCoeff, rankingType)
+optimize_elo(ratingCoeff, rankingType[0])

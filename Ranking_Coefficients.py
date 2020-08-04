@@ -27,16 +27,16 @@ def coefficients(debug=False):
     ratingCoeff = {}
     ratingCoeff['simpleElo'] = {'initRating': 1500,
                                 'avgRating': 1500,
-                                'kRating': 30,
+                                'kRating': 25,
                                 'regress': 0,
                                 'hfAdvantage': 0,
                                 'hiAdvantage': 0,
                                 'goalDiffExp': 0}
 
-    ratingCoeff['basicElo'] = {'initRating': 1300,
+    ratingCoeff['basicElo'] = {'initRating': 1150,
                                'avgRating': 1500,
-                               'kRating': 30,
-                               'regress': 0.3,
+                               'kRating': 25,
+                               'regress': 0.1,
                                'hfAdvantage': 0,
                                'hiAdvantage': 0,
                                'goalDiffExp': 0}
