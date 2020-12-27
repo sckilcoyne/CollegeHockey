@@ -12,7 +12,7 @@ Sources:
 
 # Setup
 
-import Rankings as rk
+import rankings as rk
 # import Ranking_Plots as rkplt
 import Ranking_Coefficients
 import Import_Results as ir
