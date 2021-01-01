@@ -91,7 +91,7 @@ def plot_error_seasons(results, rankingMethod):
 
 
 # Plot ratings for a team over time
-def team_rating(teamGames, team='Northeastern', savePlot=True):
+def team_rating_plot(teamGames, team='Northeastern', savePlot=True):
     fig, ax = plt.subplots(1, 1)
 
     cols = list(teamGames)
@@ -152,6 +152,17 @@ def team_games(results, team='Northeastern'):
     teamGames = teamGames.set_index('Date')
 
     return teamGames
+
+
+# Plot every team's all time rankings
+def team_games_all(results, rankingDict):
+    for team in rankingDict:
+        # Only plot teams with above threshold number of games
+        gameThreshold = 10
+        if rankingDict[team]['gameCount'] > gameThreshold:
+            teamGames = team_games(results, team)
+            team_rating_plot(teamGames, team)
+    print('Plotted each team\'s all time results')
 
 
 # Save plot to plot folder
