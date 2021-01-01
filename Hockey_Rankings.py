@@ -43,7 +43,7 @@ results = ir.results_shrink(resultsFull.copy(), 2010, 2012)
 
 # Run ranking models
 results, rankingDict = rk.game_ranking(results, ratingCoeff,
-                                       rankingType, debug[1])
+                                       rankingType, debug[0])
 
 
 # Prep plots

@@ -203,9 +203,10 @@ def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod, debug=False):
     else:
         result = 0.5
 
-    print("home Elo: " + type(homeElo).__name__)
-    print("hf Adv: " + type(hfAdv).__name__)
-    print("hi Adv: " + type(hiAdv).__name__)
+    if debug:
+        print("home Elo: " + type(homeElo).__name__)
+        print("hf Adv: " + type(hfAdv).__name__)
+        print("hi Adv: " + type(hiAdv).__name__)
 
     # Calutlate expected match score
     Qa = pow(10, (homeElo + hfAdv + hiAdv) / 400)
@@ -234,7 +235,7 @@ def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod, debug=False):
     return (homeElo_adj, awayElo_adj, predictError)
 
 
-def season_start(results, rankingDict, ratingCoeff, rankingType, season,
+def season_start(results, rankingDict, ratingCoeff, rankingTypes, season,
                  allTeams, debug=False):
     """
     Regress Rankings at Season Start.
@@ -268,31 +269,33 @@ def season_start(results, rankingDict, ratingCoeff, rankingType, season,
     seasonTeams = pd.concat(
         [seasonGames['Home'], seasonGames['Away']]).unique()
 
-    if debug:
+    if debug == 'verbose':
         print(seasonGames)
         print(seasonTeams)
 
-    regress = ratingCoeff[rankingType]['regress']
-    avgRating = ratingCoeff[rankingType]['avgRating']
-
+    # Regress each team's rating
     for team in allTeams:
-        # if play this season and last, regress
-        if team in seasonTeams:
-            currentRating = rankingDict[team][rankingType]
-            rankingDict[team][rankingType] = round(
-                currentRating - (regress * (currentRating - avgRating)), 2)
-            if debug:
-                print(team + ' played in ' + str(season) +
-                      '. Regressed from ' + str(currentRating) +
-                      ' to ' + str(rankingDict[team][rankingType]))
+        for rankingType in rankingTypes:
+            regress = ratingCoeff[rankingType]['regress']
+            avgRating = ratingCoeff[rankingType]['avgRating']
 
-        # if don't play this season, reset
-        else:
-            initRating = ratingCoeff[rankingType]['initRating']
-            rankingDict[team][rankingType] = initRating
-            if debug:
-                print(team + " reverted to " +
-                      str(ratingCoeff[rankingType]['initRating']))
+            # if play this season and last, regress
+            if team in seasonTeams:
+                currentRating = rankingDict[team][rankingType]
+                rankingDict[team][rankingType] = round(
+                    currentRating - (regress * (currentRating - avgRating)), 2)
+                if debug:
+                    print(team + ' played in ' + str(season) +
+                          '. Regressed from ' + str(currentRating) +
+                          ' to ' + str(rankingDict[team][rankingType]))
+
+            # if don't play this season, reset
+            else:
+                initRating = ratingCoeff[rankingType]['initRating']
+                rankingDict[team][rankingType] = initRating
+                if debug:
+                    print(team + " reverted to " +
+                          str(ratingCoeff[rankingType]['initRating']))
 
     return(rankingDict)
 
@@ -351,7 +354,7 @@ def game_ranking(results, ratingCoeff, rankingType,
         # Intitialize first season
         if index == 0:
             rankingDict = rankings_init(allTeams, ratingCoeff,
-                                        rankingType, debug)
+                                        rankingType)  # , debug)
             seasonLast = season
 
             if debug:
@@ -360,7 +363,7 @@ def game_ranking(results, ratingCoeff, rankingType,
         # Initialize new seasons
         elif (season - seasonLast) > 0:
             rankingDict = season_start(results, rankingDict, ratingCoeff,
-                                       rankingType, season, allTeams)
+                                       rankingType, season, allTeams, debug)
             seasonLast = season
 
             if debug:
