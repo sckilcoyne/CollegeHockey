@@ -36,10 +36,10 @@ ratingCoeff = Ranking_Coefficients.coefficients()
 # Ranking Models to run
 rankingType = ['simpleElo']
 # rankingType = ['basicElo']
-rankingType = ['simpleElo', 'basicElo']
+rankingType = ['simpleElo', 'basicElo', 'hfAdvElo', 'fullElo']
 
 # Shrink results scope for development speed
-results = ir.results_shrink(resultsFull.copy(), 2010, 2012)
+results = ir.results_shrink(resultsFull.copy(), 2010, 2015)
 
 # Run ranking models
 results, rankingDict = rk.game_ranking(results, ratingCoeff,

@@ -425,4 +425,43 @@ def game_ranking(results, ratingCoeff, rankingType,
 
     return (results, rankingDict)
 
-    return (results, rankingDict)
+
+def team_games(results, team='Northeastern'):
+    # Collect all games by given team
+
+    # Get columns
+    awayCol = ([col for col in results.columns if '_Away' in col])
+    homeCol = ([col for col in results.columns if '_Home' in col])
+    commonCols = ['Date', 'Season']
+
+    awayGames = results.loc[results['Away'] == team, commonCols + awayCol]
+    homeGames = results.loc[results['Home'] == team, commonCols + homeCol]
+
+    awayGames = awayGames.drop_suffix('_Away')
+    homeGames = homeGames.drop_suffix('_Home')
+
+    teamGames = awayGames.append(homeGames)
+
+    teamGames['Date'] = pd.to_datetime(teamGames['Date'], format='%Y-%m-%d')
+    teamGames = teamGames.sort_values(by='Date')
+
+    teamGames = teamGames.set_index('Date')
+
+    return teamGames
+
+
+def team_season_metrics(results, ratingDict):
+    # Add season summary stats for each team to ratingDict
+
+    for team in ratingDict:
+        teamGames = team_games(results, team)
+        groupedGames = teamGames.groupby(['Season'])
+        seasonMean = groupedGames.mean()
+        seasonMax = groupedGames.max()
+        seasonMin = groupedGames.min()
+
+        ratingDict[team]['seasonMean'] = seasonMean
+        ratingDict[team]['seasonMax'] = seasonMax
+        ratingDict[team]['seasonMin'] = seasonMin
+
+    return ratingDict

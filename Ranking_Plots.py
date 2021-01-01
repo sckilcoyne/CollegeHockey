@@ -6,6 +6,8 @@ Created on Sun Jul 19 11:31:12 2020
 
 @author: Scott
 """
+
+# Import standard modules
 import pandas as pd
 import numpy as np
 import os
@@ -13,6 +15,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.lines import Line2D
 # import matplotlib.cbook as cbook
+
+# Import custom modules
+import rankings as rk
 
 
 def drop_suffix(self, suffix):
@@ -91,17 +96,24 @@ def plot_error_seasons(results, rankingMethod):
 
 
 # Plot ratings for a team over time
-def team_rating_plot(teamGames, team='Northeastern', savePlot=True):
-    fig, ax = plt.subplots(1, 1)
+def plot_team_results(teamGames, team='Northeastern', savePlot=False):
 
+    # Get list of ranking types
     cols = list(teamGames)
     del cols[0]  # Remove Season column
 
+    # Create figure
+    fig, ax = plt.subplots(1, 1)
+
     seasonGames = teamGames.groupby('Season')
 
+    # Make each ranking system use same color but allow intra-season gaps
     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
     custom_lines = []
 
+    # Plot each ranking system by season
+    # Markers for indiviual game ranking (post game)
+    # Rolling average line of ranking
     for key, item in seasonGames:
         for i, rankingType in enumerate(cols):
             color = cycle[i]
@@ -128,40 +140,17 @@ def team_rating_plot(teamGames, team='Northeastern', savePlot=True):
     if savePlot:
         figTitle = 'Rating_allTime_' + team
         save_plot(fig, figTitle)
-
-
-# Collect all games by given team
-def team_games(results, team='Northeastern'):
-
-    # Get columns
-    awayCol = ([col for col in results.columns if '_Away' in col])
-    homeCol = ([col for col in results.columns if '_Home' in col])
-    commonCols = ['Date', 'Season']
-
-    awayGames = results.loc[results['Away'] == team, commonCols + awayCol]
-    homeGames = results.loc[results['Home'] == team, commonCols + homeCol]
-
-    awayGames = awayGames.drop_suffix('_Away')
-    homeGames = homeGames.drop_suffix('_Home')
-
-    teamGames = awayGames.append(homeGames)
-
-    teamGames['Date'] = pd.to_datetime(teamGames['Date'], format='%Y-%m-%d')
-    teamGames = teamGames.sort_values(by='Date')
-
-    teamGames = teamGames.set_index('Date')
-
-    return teamGames
+        plt.close(fig)
 
 
 # Plot every team's all time rankings
-def team_games_all(results, rankingDict):
+def plot_all_team_results(results, rankingDict):
     for team in rankingDict:
         # Only plot teams with above threshold number of games
         gameThreshold = 10
         if rankingDict[team]['gameCount'] > gameThreshold:
-            teamGames = team_games(results, team)
-            team_rating_plot(teamGames, team)
+            teamGames = rk.team_games(results, team)
+            plot_team_results(teamGames, team, True)
     print('Plotted each team\'s all time results')
 
 
