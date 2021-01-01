@@ -97,10 +97,6 @@ def team_rating(teamGames, team='Northeastern', savePlot=True):
     cols = list(teamGames)
     del cols[0]  # Remove Season column
 
-    dateSeries = teamGames.index.to_pydatetime()
-
-    # ax.scatter(dateSeries, teamGames)
-
     seasonGames = teamGames.groupby('Season')
 
     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
