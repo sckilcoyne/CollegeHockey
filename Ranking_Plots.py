@@ -94,37 +94,49 @@ def team_rating(teamGames, team='Northeastern', savePlot=True):
     fig, ax = plt.subplots(1, 1)
 
     cols = list(teamGames)
-    del cols[0]  # Remove Date column
+    del cols[0]  # Remove Season column
 
     dateSeries = teamGames.index.to_pydatetime()
 
-    ax.scatter(dateSeries, teamGames)
+    # ax.scatter(dateSeries, teamGames)
 
-    # for col in cols:
-    #     ax.scatter(dateSeries, teamGames[col])
-    ax.plot(dateSeries, teamGames.rolling('7d').mean())
+    seasonGames = teamGames.groupby('Season')
+
+    cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    for key, item in seasonGames:
+        for i, rankingType in enumerate(cols):
+            color = cycle[i]
+            ax.scatter(item.index, item[rankingType], color=color)
+            ax.plot(item.index,
+                    item[rankingType].rolling('7d').mean(), color=color)
+
+    # ax.plot(dateSeries, teamGames.rolling('7d').mean())
     ax.set_title(team)
-    ax.legend(cols)
 
     locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
     formatter = mdates.ConciseDateFormatter(locator)
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(formatter)
 
+    fig.set_figheight(9)
+    fig.set_figwidth(16)
+
     if savePlot:
-        figTitle = 'Rating_allTime_'+team
+        figTitle = 'Rating_allTime_' + team
         save_plot(fig, figTitle)
 
+
 # Collect all games by given team
-
-
 def team_games(results, team='Northeastern'):
 
+    # Get columns
     awayCol = ([col for col in results.columns if '_Away' in col])
     homeCol = ([col for col in results.columns if '_Home' in col])
+    commonCols = ['Date', 'Season']
 
-    awayGames = results.loc[results['Away'] == team, ['Date']+awayCol]
-    homeGames = results.loc[results['Home'] == team, ['Date']+homeCol]
+    awayGames = results.loc[results['Away'] == team, commonCols + awayCol]
+    homeGames = results.loc[results['Home'] == team, commonCols + homeCol]
 
     awayGames = awayGames.drop_suffix('_Away')
     homeGames = homeGames.drop_suffix('_Home')
@@ -139,7 +151,8 @@ def team_games(results, team='Northeastern'):
     return teamGames
 
 
+# Save plot to plot folder
 def save_plot(fig, figTitle):
     pwd = os.getcwd()
-    figFolder = pwd+'/Plots/'
+    figFolder = pwd + '/Plots/'
     fig.savefig(figFolder+figTitle+'.png')

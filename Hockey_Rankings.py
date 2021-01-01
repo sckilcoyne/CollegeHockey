@@ -10,15 +10,19 @@ Sources:
 @author: Scott
 """
 
-# Setup
+# -------Setup----------
+# Import common modules
+import pandas as pd
+import importlib
+import matplotlib.pyplot as plt
 
+# Import all custom modules
 import rankings as rk
-# import Ranking_Plots as rkplt
+import Ranking_Plots as rkplt
 import Ranking_Coefficients
 import Import_Results as ir
 
-import pandas as pd
-
+debug = [False, True, 'verbose']
 
 # Import Data
 resultsFull = pd.read_csv('Results_Composite.csv')
@@ -26,18 +30,21 @@ print('Results shape: ', resultsFull.shape)
 
 # results = resultsFull
 
-
+# Get ranking coefficients
 ratingCoeff = Ranking_Coefficients.coefficients()
 
-
-# Run single rankings
+# Ranking Models to run
 rankingType = ['simpleElo']
 # rankingType = ['basicElo']
+rankingType = ['simpleElo', 'basicElo']
 
-results = ir.results_shrink(resultsFull.copy(), 2010, 2010)
+# Shrink results scope for development speed
+results = ir.results_shrink(resultsFull.copy(), 2010, 2012)
 
-
-debug = [False, True, 'verbose']
-
+# Run ranking models
 results, rankingDict = rk.game_ranking(results, ratingCoeff,
-                                       rankingType, debug[0])
+                                       rankingType, debug[1])
+
+
+# Prep plots
+teamGames = rkplt.team_games(results)

@@ -45,7 +45,7 @@ def find_teams(results, debug=False):
     return(allTeams)
 
 
-def rankings_init(allTeams, ratingCoeff, rankingType, debug=False):
+def rankings_init(allTeams, ratingCoeff, rankingTypes, debug=False):
     """
     Initialize rankings for all teams.
 
@@ -66,20 +66,25 @@ def rankings_init(allTeams, ratingCoeff, rankingType, debug=False):
     """
     if debug:
         print('rankings_init in Debug mode.')
-        print(rankingType)
+        # print(rankingType)
 
     rankingDict = {}
 
     for x, team in np.ndenumerate(allTeams):
-        if debug:
+        if debug == 'verbose':
             print('x: ' + str(x))
             print('value: ' + str(team))
 
-        rankingDict[team] = {
-            'gameCount': 0,
-            rankingType: ratingCoeff[rankingType]['avgRating']}
+        rankingDict[team] = {'gameCount': 0}
+
+        for rankingType in rankingTypes:
+            rankingDict[team].update({
+                rankingType: ratingCoeff[rankingType]['avgRating']})
 
     if debug:
+        print('rankingDict shape: ' + str(len(rankingDict)))
+
+    if debug == 'verbose':
         print(rankingDict)
 
     return(rankingDict)
@@ -198,6 +203,10 @@ def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod, debug=False):
     else:
         result = 0.5
 
+    print("home Elo: " + type(homeElo).__name__)
+    print("hf Adv: " + type(hfAdv).__name__)
+    print("hi Adv: " + type(hiAdv).__name__)
+
     # Calutlate expected match score
     Qa = pow(10, (homeElo + hfAdv + hiAdv) / 400)
     Qb = pow(10, awayElo / 400)
@@ -256,7 +265,8 @@ def season_start(results, rankingDict, ratingCoeff, rankingType, season,
 
     seasonGames = results[results.Season == season]
 
-    seasonTeams = pd.concat([seasonGames['Home'], seasonGames['Away']]).unique()
+    seasonTeams = pd.concat(
+        [seasonGames['Home'], seasonGames['Away']]).unique()
 
     if debug:
         print(seasonGames)
@@ -269,7 +279,8 @@ def season_start(results, rankingDict, ratingCoeff, rankingType, season,
         # if play this season and last, regress
         if team in seasonTeams:
             currentRating = rankingDict[team][rankingType]
-            rankingDict[team][rankingType] = round(currentRating - (regress * (currentRating - avgRating)), 2)
+            rankingDict[team][rankingType] = round(
+                currentRating - (regress * (currentRating - avgRating)), 2)
             if debug:
                 print(team + ' played in ' + str(season) +
                       '. Regressed from ' + str(currentRating) +
@@ -316,10 +327,13 @@ def game_ranking(results, ratingCoeff, rankingType,
 
     if debug:
         print('game_ranking in debug mode.')
-        print(rankingType)
+        sep = ", "
+        print("Ranking systems to run: " + sep.join(rankingType))
 
+    # Get list of all teams in results
     allTeams = find_teams(results)
 
+    # Create columns for ranking results for each ranking system
     for rankType in rankingType:
         results[rankType + '_Away'] = np.nan
         results[rankType + '_Home'] = np.nan
@@ -334,24 +348,29 @@ def game_ranking(results, ratingCoeff, rankingType,
             print('Index: ' + str(index) + '  Season: ' + str(season))
             print(row)
 
+        # Intitialize first season
+        if index == 0:
+            rankingDict = rankings_init(allTeams, ratingCoeff,
+                                        rankingType, debug)
+            seasonLast = season
+
+            if debug:
+                print('First season initialized.')
+
+        # Initialize new seasons
+        elif (season - seasonLast) > 0:
+            rankingDict = season_start(results, rankingDict, ratingCoeff,
+                                       rankingType, season, allTeams)
+            seasonLast = season
+
+            if debug:
+                print(str(season) + ' season initialized')
+
         for rankingMethod in rankingType:
-            # Intitialize first season
-            if index == 0:
-                rankingDict = rankings_init(allTeams, ratingCoeff,
-                                            rankingMethod)
-                seasonLast = season
-
-                if debug:
-                    print('First season initialized.')
-
-            # Initialize new seasons
-            elif (season - seasonLast) > 0:
-                rankingDict = season_start(results, rankingDict, ratingCoeff,
-                                           rankingMethod, season, allTeams)
-                seasonLast = season
-
-                if debug:
-                    print(str(season) + ' season initialized')
+            if debug:
+                print(rankingMethod)
+                # print(row)
+                # print(ratingCoeff)
 
             # Home and Away teams
             teamAway = row.Away
@@ -363,6 +382,10 @@ def game_ranking(results, ratingCoeff, rankingType,
 
             goalDiff = row.Home_Score - row.Away_Score
             # goalDiff = row[5] - row[2]
+
+            if debug:
+                print("Away: " + teamAway + " Elo: " + str(eloAway))
+                print("Home: " + teamHome + " Elo: " + str(eloHome))
 
             # Choose ranking function based on method
             if 'Elo' in rankingMethod:
@@ -396,5 +419,7 @@ def game_ranking(results, ratingCoeff, rankingType,
         path_or_buf = 'Results_Rankings.csv'
         results.to_csv(path_or_buf=path_or_buf, index='False')
         print('Results saved to ' + path_or_buf)
+
+    return (results, rankingDict)
 
     return (results, rankingDict)
