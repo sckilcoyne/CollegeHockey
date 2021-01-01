@@ -11,6 +11,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.lines import Line2D
 # import matplotlib.cbook as cbook
 
 
@@ -103,22 +104,28 @@ def team_rating(teamGames, team='Northeastern', savePlot=True):
     seasonGames = teamGames.groupby('Season')
 
     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    custom_lines = []
 
     for key, item in seasonGames:
         for i, rankingType in enumerate(cols):
             color = cycle[i]
-            ax.scatter(item.index, item[rankingType], color=color)
+            ax.scatter(item.index, item[rankingType], color=color, marker='x')
             ax.plot(item.index,
                     item[rankingType].rolling('7d').mean(), color=color)
+            custom_lines = custom_lines + [Line2D([0], [0], color=color)]
 
-    # ax.plot(dateSeries, teamGames.rolling('7d').mean())
+    # Label plot
     ax.set_title(team)
+    # https://matplotlib.org/3.1.1/gallery/text_labels_and_annotations/custom_legends.html
+    ax.legend(custom_lines, cols)
 
+    # Create pretty date axis
     locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
     formatter = mdates.ConciseDateFormatter(locator)
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(formatter)
 
+    # Set figure size
     fig.set_figheight(9)
     fig.set_figwidth(16)
 
