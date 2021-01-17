@@ -525,7 +525,5 @@ def overall_metrics(rankDict):
                 summaryData = seasonData.loc[:, col].mean()
 
             overallMetrics.loc[(season, 'Average'), col] = summaryData
-        # print(season)
-        # print(seasonData)
 
     return overallMetrics

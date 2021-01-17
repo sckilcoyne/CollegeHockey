@@ -157,9 +157,15 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
     ax.xaxis.set_major_formatter(formatter)
 
     # Set figure size
-    fig.set_figheight(3*len(rankMethod))
+    fig.set_figheight(2*len(rankMethod))
     fig.set_figwidth(16)
     plt.tight_layout()
+
+    # Add source refs
+    plt.figtext(
+        0.1, 1,
+        '\ngithub.com/sckilcoyne/CollegeHockey\nGame results from CHN.com',
+        verticalalignment='top')
 
     if savePlot:
         figTitle = 'Rating_allTime_' + team
