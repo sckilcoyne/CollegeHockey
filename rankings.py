@@ -450,18 +450,82 @@ def team_games(results, team='Northeastern'):
     return teamGames
 
 
-def team_season_metrics(results, ratingDict):
+def team_season_metrics(results, rankingDict):
     # Add season summary stats for each team to ratingDict
 
-    for team in ratingDict:
+    for team in rankingDict:
         teamGames = team_games(results, team)
         groupedGames = teamGames.groupby(['Season'])
         seasonMean = groupedGames.mean()
         seasonMax = groupedGames.max()
         seasonMin = groupedGames.min()
 
-        ratingDict[team]['seasonMean'] = seasonMean
-        ratingDict[team]['seasonMax'] = seasonMax
-        ratingDict[team]['seasonMin'] = seasonMin
+        rankingDict[team]['seasonMean'] = seasonMean
+        rankingDict[team]['seasonMax'] = seasonMax
+        rankingDict[team]['seasonMin'] = seasonMin
 
-    return ratingDict
+    return rankingDict
+
+
+def overall_metrics(rankDict):
+    # Get rating summaries for all teams for each season
+
+    # Parameters
+    minGameThresh = 20
+
+    # Prep
+    overallMetrics = pd.DataFrame()
+
+    # Convert rankingDict to multi-level dataframe
+    # Columns: Season, Team, {rating [mean, max, min]}
+    for team, value in rankDict.items():
+        teamMetrics = pd.DataFrame()
+        for metric, df in value.items():
+            # Pull data from columns look at season summary stats
+            if 'season' in metric:
+                dfMetrics = df.copy()  # otherwise modifies input df in dict
+                dfMetrics.columns = pd.MultiIndex.from_product(
+                    [dfMetrics.columns, [metric]])
+                # Build dataframe with all ranking methods and their season
+                # summaries, for each season
+                if teamMetrics.empty:
+                    teamMetrics = dfMetrics
+                else:
+                    teamMetrics = pd.merge(
+                        teamMetrics, dfMetrics, left_on='Season',
+                        right_index=True, how='left', sort=False)
+
+        # Clean up dataframe indicies
+        teamMetrics.sort_index(axis=1, inplace=True)
+        teamMetrics['Team'] = team
+        teamMetrics.set_index(['Team'], append=True, inplace=True)
+        # Add secondary info
+        teamMetrics['gameCount'] = value['gameCount']
+
+        # Add team's data to top level dataframe
+        if overallMetrics.empty:
+            overallMetrics = teamMetrics
+        else:
+            overallMetrics = overallMetrics.append(teamMetrics)
+
+    # Sort idicies
+    overallMetrics.sort_index(axis=0, inplace=True)
+    # Filter out low game count teams
+    filteredMetrics = overallMetrics[(
+        overallMetrics.gameCount > minGameThresh)]
+
+    # Create output metrics
+    for season, seasonData in filteredMetrics.groupby(level=0):
+        for col in seasonData:
+            if 'Max' in col[1]:
+                summaryData = seasonData.loc[:, col].max()
+            if 'Min' in col[1]:
+                summaryData = seasonData.loc[:, col].min()
+            if 'Mean' in col[1]:
+                summaryData = seasonData.loc[:, col].mean()
+
+            overallMetrics.loc[(season, 'Average'), col] = summaryData
+        # print(season)
+        # print(seasonData)
+
+    return overallMetrics

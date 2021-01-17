@@ -96,14 +96,16 @@ def plot_error_seasons(results, rankingMethod):
 
 
 # Plot ratings for a team over time
-def plot_team_results(teamGames, team='Northeastern', savePlot=False):
+def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=False):
 
     # Get list of ranking types
-    cols = list(teamGames)
-    del cols[0]  # Remove Season column
+    rankMethod = list(teamGames)
+    del rankMethod[0]  # Remove Season column
 
     # Create figure
-    fig, ax = plt.subplots(1, 1)
+    # One plot for each ranking method
+    fig, axs = plt.subplots(len(rankMethod), 1, squeeze=False)
+    fig.suptitle(team, fontweight='bold', fontsize=16)
 
     seasonGames = teamGames.groupby('Season')
 
@@ -114,18 +116,39 @@ def plot_team_results(teamGames, team='Northeastern', savePlot=False):
     # Plot each ranking system by season
     # Markers for indiviual game ranking (post game)
     # Rolling average line of ranking
-    for key, item in seasonGames:
-        for i, rankingType in enumerate(cols):
-            color = cycle[i]
-            ax.scatter(item.index, item[rankingType], color=color, marker='x')
+    for i, ax in enumerate(axs.flat):  # Subplot for each ranking method
+        # https://stackoverflow.com/questions/20288842/matplotlib-iterate-subplot-axis-array-through-single-list
+        for key, item in seasonGames:
+            # color = cycle[i]
+            color = cycle[0]
+            ax.scatter(
+                item.index, item[rankMethod[i]], color=color,
+                marker='x', alpha=0.3)
             ax.plot(item.index,
-                    item[rankingType].rolling('7d').mean(), color=color)
+                    item[rankMethod[i]].rolling('7d').mean(), color=color)
             custom_lines = custom_lines + [Line2D([0], [0], color=color)]
 
-    # Label plot
-    ax.set_title(team)
+            # Add overall metrics for season
+            seasonStart = item.index.min()
+            seasonEnd = item.index.max()
+            seasonMax = overallMetrics.loc[(
+                key, 'Average'), (rankMethod[i], 'seasonMax')]
+            seasonMin = overallMetrics.loc[(
+                key, 'Average'), (rankMethod[i], 'seasonMin')]
+            seasonMean = overallMetrics.loc[(
+                key, 'Average'), (rankMethod[i], 'seasonMean')]
+            ax.hlines(seasonMax, seasonStart, seasonEnd,
+                      color=cycle[1], linestyles='dotted')
+            ax.hlines(seasonMin, seasonStart, seasonEnd,
+                      color=cycle[1], linestyles='dotted')
+            ax.hlines(seasonMean, seasonStart, seasonEnd,
+                      color=cycle[1], linestyles='dotted')
+
+        # Label subplot
+        ax.set_title(rankMethod[i])
+
     # https://matplotlib.org/3.1.1/gallery/text_labels_and_annotations/custom_legends.html
-    ax.legend(custom_lines, cols)
+    # ax.legend(custom_lines, rankMethod)
 
     # Create pretty date axis
     locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
@@ -134,8 +157,9 @@ def plot_team_results(teamGames, team='Northeastern', savePlot=False):
     ax.xaxis.set_major_formatter(formatter)
 
     # Set figure size
-    fig.set_figheight(9)
+    fig.set_figheight(3*len(rankMethod))
     fig.set_figwidth(16)
+    plt.tight_layout()
 
     if savePlot:
         figTitle = 'Rating_allTime_' + team
@@ -144,13 +168,13 @@ def plot_team_results(teamGames, team='Northeastern', savePlot=False):
 
 
 # Plot every team's all time rankings
-def plot_all_team_results(results, rankingDict):
+def plot_all_team_results(results, rankingDict, overallMetrics):
     for team in rankingDict:
         # Only plot teams with above threshold number of games
         gameThreshold = 10
         if rankingDict[team]['gameCount'] > gameThreshold:
             teamGames = rk.team_games(results, team)
-            plot_team_results(teamGames, team, True)
+            plot_team_results(teamGames, overallMetrics, team, True)
     print('Plotted each team\'s all time results')
 
 
