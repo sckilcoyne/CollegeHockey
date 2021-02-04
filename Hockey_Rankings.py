@@ -29,7 +29,6 @@ debug = [False, True, 'verbose']
 resultsFull = pd.read_csv('Results_Composite.csv')
 print('Results shape: ', resultsFull.shape)
 
-# results = resultsFull
 
 # Get ranking coefficients
 ratingCoeff = Ranking_Coefficients.coefficients()
@@ -41,6 +40,7 @@ rankingType = ['simpleElo', 'basicElo', 'hfAdvElo', 'fullElo']
 
 # Shrink results scope for development speed
 results = ir.results_shrink(resultsFull.copy(), 2010, 2015)
+results = resultsFull
 
 # Run ranking models
 results, rankingDict = rk.game_ranking(results, ratingCoeff,

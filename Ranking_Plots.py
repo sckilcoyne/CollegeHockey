@@ -104,7 +104,10 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
 
     # Create figure
     # One plot for each ranking method
-    fig, axs = plt.subplots(len(rankMethod), 1, squeeze=False)
+    seasonCount = teamGames.Season.max()-teamGames.Season.min()
+    fig, axs = plt.subplots(len(rankMethod), seasonCount,
+                            squeeze=False, sharey=True)
+    fig.subplots_adjust(vspace=0.05)  # adjust space between axes
     fig.suptitle(team, fontweight='bold', fontsize=16)
 
     seasonGames = teamGames.groupby('Season')
@@ -121,9 +124,11 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
         for key, item in seasonGames:
             # color = cycle[i]
             color = cycle[0]
-            ax.scatter(
-                item.index, item[rankMethod[i]], color=color,
-                marker='x', alpha=0.3)
+# =============================================================================
+#             ax.scatter(
+#                 item.index, item[rankMethod[i]], color=color,
+#                 marker='x', alpha=0.3)
+# =============================================================================
             ax.plot(item.index,
                     item[rankMethod[i]].rolling('7d').mean(), color=color)
             custom_lines = custom_lines + [Line2D([0], [0], color=color)]
@@ -158,7 +163,7 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
 
     # Set figure size
     fig.set_figheight(2*len(rankMethod))
-    fig.set_figwidth(16)
+    fig.set_figwidth(max(16, seasonCount))
     plt.tight_layout()
 
     # Add source refs
