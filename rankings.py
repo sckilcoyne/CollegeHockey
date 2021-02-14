@@ -8,8 +8,11 @@ Functions to calculate rankings.
 # Setup
 import pandas as pd
 import numpy as np
+import streamlit as st
+import json
 
 
+# @st.cache
 def find_teams(results, debug=False):
     """
     Create a list of all teams in results database.
@@ -45,6 +48,7 @@ def find_teams(results, debug=False):
     return(allTeams)
 
 
+# @st.cache
 def rankings_init(allTeams, ratingCoeff, rankingTypes, debug=False):
     """
     Initialize rankings for all teams.
@@ -300,6 +304,7 @@ def season_start(results, rankingDict, ratingCoeff, rankingTypes, season,
     return(rankingDict)
 
 
+# @st.cache
 def game_ranking(results, ratingCoeff, rankingType,
                  debug=False, saveResults=True):
     """
@@ -423,6 +428,10 @@ def game_ranking(results, ratingCoeff, rankingType,
         results.to_csv(path_or_buf=path_or_buf, index='False')
         print('Results saved to ' + path_or_buf)
 
+        with open('Ranking_Dict.txt', 'w') as file:
+            # use `json.loads` to do the reverse
+            file.write(json.dumps(rankingDict))
+
     return (results, rankingDict)
 
 
@@ -450,6 +459,7 @@ def team_games(results, team='Northeastern'):
     return teamGames
 
 
+# @st.cache
 def team_season_metrics(results, rankingDict):
     # Add season summary stats for each team to ratingDict
 
@@ -467,6 +477,7 @@ def team_season_metrics(results, rankingDict):
     return rankingDict
 
 
+# @st.cache
 def overall_metrics(rankDict):
     # Get rating summaries for all teams for each season
 
@@ -526,4 +537,5 @@ def overall_metrics(rankDict):
 
             overallMetrics.loc[(season, 'Average'), col] = summaryData
 
+    overallMetrics.to_hdf('Overall_Metrics.h5', key='overallMetrics', mode='w')
     return overallMetrics

@@ -7,7 +7,10 @@ Created on Sun Jul 19 11:31:12 2020
 @author: Scott
 """
 
+import streamlit as st
 
+
+@st.cache
 def coefficients(debug=False):
     """
     Generate Ranking System Coefficients.

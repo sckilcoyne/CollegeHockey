@@ -101,13 +101,14 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
     # Get list of ranking types
     rankMethod = list(teamGames)
     del rankMethod[0]  # Remove Season column
+    rankMethod = rankMethod[0]
 
     # Create figure
     # One plot for each ranking method
     seasonCount = teamGames.Season.max()-teamGames.Season.min()
     fig, axs = plt.subplots(len(rankMethod), seasonCount,
                             squeeze=False, sharey=True)
-    fig.subplots_adjust(vspace=0.05)  # adjust space between axes
+    fig.subplots_adjust(wspace=0.05)  # adjust space between axes
     fig.suptitle(team, fontweight='bold', fontsize=16)
 
     seasonGames = teamGames.groupby('Season')
@@ -130,18 +131,27 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
 #                 marker='x', alpha=0.3)
 # =============================================================================
             ax.plot(item.index,
-                    item[rankMethod[i]].rolling('7d').mean(), color=color)
+                    # item[rankMethod[i]].rolling('7d').mean(), color=color)
+                    item[rankMethod].rolling('7d').mean(), color=color)
             custom_lines = custom_lines + [Line2D([0], [0], color=color)]
 
             # Add overall metrics for season
             seasonStart = item.index.min()
             seasonEnd = item.index.max()
+# =============================================================================
+#             seasonMax = overallMetrics.loc[(
+#                 key, 'Average'), (rankMethod[i], 'seasonMax')]
+#             seasonMin = overallMetrics.loc[(
+#                 key, 'Average'), (rankMethod[i], 'seasonMin')]
+#             seasonMean = overallMetrics.loc[(
+#                 key, 'Average'), (rankMethod[i], 'seasonMean')]
+# =============================================================================
             seasonMax = overallMetrics.loc[(
-                key, 'Average'), (rankMethod[i], 'seasonMax')]
+                key, 'Average'), (rankMethod, 'seasonMax')]
             seasonMin = overallMetrics.loc[(
-                key, 'Average'), (rankMethod[i], 'seasonMin')]
+                key, 'Average'), (rankMethod, 'seasonMin')]
             seasonMean = overallMetrics.loc[(
-                key, 'Average'), (rankMethod[i], 'seasonMean')]
+                key, 'Average'), (rankMethod, 'seasonMean')]
             ax.hlines(seasonMax, seasonStart, seasonEnd,
                       color=cycle[1], linestyles='dotted')
             ax.hlines(seasonMin, seasonStart, seasonEnd,
@@ -150,7 +160,7 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
                       color=cycle[1], linestyles='dotted')
 
         # Label subplot
-        ax.set_title(rankMethod[i])
+        # ax.set_title(rankMethod[i])
 
     # https://matplotlib.org/3.1.1/gallery/text_labels_and_annotations/custom_legends.html
     # ax.legend(custom_lines, rankMethod)
@@ -162,7 +172,8 @@ def plot_team_results(teamGames, overallMetrics, team='Northeastern', savePlot=F
     ax.xaxis.set_major_formatter(formatter)
 
     # Set figure size
-    fig.set_figheight(2*len(rankMethod))
+    # fig.set_figheight(2*len(rankMethod))
+    fig.set_figheight(8)
     fig.set_figwidth(max(16, seasonCount))
     plt.tight_layout()
 

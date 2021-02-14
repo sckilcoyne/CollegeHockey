@@ -26,9 +26,8 @@ debug = [False, True, 'verbose']
 
 # %% Run initial stuff
 # Import Data
-resultsFull = pd.read_csv('Results_Composite.csv')
-print('Results shape: ', resultsFull.shape)
-
+# resultsFull = pd.read_csv('Results_Composite.csv')
+resultsFull = ir.load_composite_results('local')
 
 # Get ranking coefficients
 ratingCoeff = Ranking_Coefficients.coefficients()

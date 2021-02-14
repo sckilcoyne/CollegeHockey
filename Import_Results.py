@@ -9,9 +9,10 @@ Download and Import Hockey Results.
 import pandas as pd
 import numpy as np
 import time
+import streamlit as st
 
 
-def download_results_CHN(yearStart=1900, yearEnd=2020):
+def download_results_CHN(yearStart=1900, yearEnd=2021):
     """
     Download results from CHN.
 
@@ -122,7 +123,8 @@ def clean_results(fileName='CHN_Raw.csv'):
     # print(type(conf))
     # print(conf)
     results_cleaned['Conference'] = conf
-    results_cleaned['Conference'] = results_cleaned['Conference'].fillna(method='ffill')
+    results_cleaned['Conference'] = results_cleaned['Conference'].fillna(
+        method='ffill')
     results_cleaned = results_cleaned[~conf_isdigit]
 
     # Add Season to Each Game
@@ -164,3 +166,14 @@ def results_shrink(results, startYear=2010, endYear=2019):
     print('Results limited to ', str(startYear), ' through ', str(endYear))
     print('Results shape: ', resultsShrink.shape)
     return resultsShrink
+
+
+@st.cache(suppress_st_warning=True)
+def load_composite_results(location='local'):
+    if location == 'local':
+        resultsFull = pd.read_csv('Results_Composite.csv')
+    else:
+        resultsFull = pd.read_csv(location)
+
+    print('Results shape: ', resultsFull.shape)
+    return resultsFull
