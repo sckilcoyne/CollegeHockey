@@ -38,7 +38,7 @@ rankingType = ['simpleElo']
 rankingType = ['simpleElo', 'basicElo', 'hfAdvElo', 'fullElo']
 
 # Shrink results scope for development speed
-results = ir.results_shrink(resultsFull.copy(), 2010, 2015)
+# results = ir.results_shrink(resultsFull.copy(), 2010, 2015)
 results = resultsFull
 
 # Run ranking models

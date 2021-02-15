@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import requests
 import json
+import matplotlib.dates as mdates
 
 # Import custom modules
 import rankings as rk
@@ -22,31 +23,9 @@ import Import_Results as ir
 
 debug = [False, True, 'verbose']
 
+rankMethod = 'fullElo'
+
 # %% Set up data
-# Import Data
-# =============================================================================
-# resultsFile = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/master/Results_Composite.csv'
-#
-# resultsLoaded = ir.load_composite_results(resultsFile)
-# resultsFull = resultsLoaded.copy()
-#
-# # Get ranking coefficients
-# ratingCoeff = Ranking_Coefficients.coefficients()
-#
-# # Ranking Models to run
-# rankingType = ['simpleElo']
-#
-# # Team list
-# teamList = rk.find_teams(resultsFull)
-#
-# # Run ranking models
-# results, rankingDict = rk.game_ranking(resultsFull, ratingCoeff,
-#                                        rankingType, debug[0])
-#
-# # Generate Summary Statistics
-# rankingDict = rk.team_season_metrics(results, rankingDict)
-# overallMetrics = rk.overall_metrics(rankingDict)
-# =============================================================================
 
 
 @st.cache
@@ -68,42 +47,92 @@ def import_from_github():
 
     r = requests.get(rankingDictFile)
     rankingDict = r.json()
-    print(len(rankingDict))
+    # print(len(rankingDict))
 
     resultsFull = pd.read_csv(compositeResultsFile)
+    resultsFull['Date'] = pd.to_datetime(resultsFull['Date'])
 
     results = pd.read_csv(rankingResultsFile)
+    results['Date'] = pd.to_datetime(results['Date'])
 
     return overallMetrics, rankingDict, resultsFull, results
 
 
 # Import data from Guthub
 overallMetrics, rankingDict, resultsFull, results = import_from_github()
-print(list(results))
+# print(list(results))
 
 # Team list
-teamList = rk.find_teams(resultsFull)
+# teamList = rk.find_teams(resultsFull)
+rankingDf = pd.DataFrame.from_dict(rankingDict, orient='index')
+rankingDfFilter = rankingDf.loc[
+    # ((rankingDf['yearCount'] > 50) and (rankingDf['gameCount'] > 25)) |
+    ((rankingDf['gameCount'] / rankingDf['yearCount']) > 5)]
+teamList = list(rankingDfFilter.index.values)
+
+currentBestTeams = rankingDfFilter.nlargest(10, rankMethod)
+currentBestTeams = list(currentBestTeams.index.values)
+# print(currentBest)
 
 # %% Create Dashboard
 st.title('College Hockey Rankings')
 st.header('by @sckilcoyne with data from CHN')
 
-plotTeams = st.sidebar.multiselect('Teams', teamList)
+# Interface
+plotTeams = st.sidebar.multiselect('Teams', teamList, currentBestTeams)
 
+currentSeason = max(resultsFull.Season)
+plotYears = st.sidebar.slider('Seasons', min(
+    resultsFull.Season), currentSeason, (currentSeason-5, currentSeason))
+seasonCount = plotYears[1] - plotYears[0] + 1
+seasonRange = range(plotYears[0], plotYears[1] + 1)
+
+comparisonData = st.sidebar.checkbox('Season Extremes', True)
+
+# Plots
 legend = []
-fig, ax = plt.subplots()
-for team in plotTeams:
+fig, axs = plt.subplots(1, seasonCount, squeeze=False, sharey=True)
+fig.subplots_adjust(wspace=0.05)  # adjust space between axes
 
-    teamGames = rk.team_games(results, team)
+# Make each ranking system use same color but allow intra-season gaps
+cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+custom_lines = []
 
-    # Get list of ranking types
-    rankMethod = list(teamGames)
-    del rankMethod[0]  # Remove Season column
-    rankMethod = rankMethod[0]
+for i, ax in enumerate(axs.flat):  # Subplot for each season
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.tick_params(left=False)
+    ax.xaxis.set_major_locator(mdates.YearLocator())
 
-    ax.plot(teamGames['simpleElo'])
+    seasonYear = seasonRange[i]
 
-    legend = legend + [team]
+    # Add overall metrics for season
+    if comparisonData:
+        allGamesSeason = resultsFull.loc[resultsFull['Season'] == seasonYear]
+        seasonStart = allGamesSeason.Date.min()
+        seasonEnd = allGamesSeason.Date.max()
+        seasonMax = overallMetrics.loc[(
+            seasonYear, 'Average'), (rankMethod, 'seasonMax')]
+        seasonMin = overallMetrics.loc[(
+            seasonYear, 'Average'), (rankMethod, 'seasonMin')]
+        seasonMean = overallMetrics.loc[(
+            seasonYear, 'Average'), (rankMethod, 'seasonMean')]
+        ax.hlines(seasonMax, seasonStart, seasonEnd,
+                  color='gray', linestyles='dotted')
+        ax.hlines(seasonMin, seasonStart, seasonEnd,
+                  color='gray', linestyles='dotted')
+        ax.hlines(seasonMean, seasonStart, seasonEnd,
+                  color='gray', linestyles='dotted')
 
-ax.legend(legend)
+    for team in plotTeams:
+        teamGames = rk.team_games(results, team)
+
+        seasonGames = teamGames.groupby('Season')
+        seasonGames = teamGames.loc[teamGames.Season == seasonYear]
+        ax.plot(seasonGames[rankMethod])
+
+ax.legend(plotTeams)  # , bbox_to_anchor=(1.5, 0.5))
+
+fig.set_figheight(12)
+fig.set_figwidth(15)
 st.pyplot(fig)

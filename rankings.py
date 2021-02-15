@@ -45,7 +45,8 @@ def find_teams(results, debug=False):
 
     # print(allTeams)
     print(str(len(allTeams)) + ' unique teams.')
-    return(allTeams)
+
+    return allTeams
 
 
 # @st.cache
@@ -79,7 +80,7 @@ def rankings_init(allTeams, ratingCoeff, rankingTypes, debug=False):
             print('x: ' + str(x))
             print('value: ' + str(team))
 
-        rankingDict[team] = {'gameCount': 0}
+        rankingDict[team] = {'gameCount': 0, 'yearCount': 1}
 
         for rankingType in rankingTypes:
             rankingDict[team].update({
@@ -279,6 +280,10 @@ def season_start(results, rankingDict, ratingCoeff, rankingTypes, season,
 
     # Regress each team's rating
     for team in allTeams:
+        if team in seasonTeams:
+            yearCount = rankingDict[team]['yearCount']
+            rankingDict[team]['yearCount'] = yearCount + 1
+
         for rankingType in rankingTypes:
             regress = ratingCoeff[rankingType]['regress']
             avgRating = ratingCoeff[rankingType]['avgRating']
@@ -482,7 +487,7 @@ def overall_metrics(rankDict):
     # Get rating summaries for all teams for each season
 
     # Parameters
-    minGameThresh = 20
+    minGameThresh = 0
 
     # Prep
     overallMetrics = pd.DataFrame()
