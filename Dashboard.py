@@ -63,7 +63,6 @@ overallMetrics, rankingDict, resultsFull, results = import_from_github()
 # print(list(results))
 
 # Team list
-# teamList = rk.find_teams(resultsFull)
 rankingDf = pd.DataFrame.from_dict(rankingDict, orient='index')
 rankingDfFilter = rankingDf.loc[
     # ((rankingDf['yearCount'] > 50) and (rankingDf['gameCount'] > 25)) |
@@ -82,8 +81,10 @@ st.header('by @sckilcoyne with data from CHN')
 plotTeams = st.sidebar.multiselect('Teams', teamList, currentBestTeams)
 
 currentSeason = max(resultsFull.Season)
-plotYears = st.sidebar.slider('Seasons', min(
-    resultsFull.Season), currentSeason, (currentSeason-5, currentSeason))
+plotYears = st.sidebar.slider('Seasons',
+                              min(resultsFull.Season),
+                              currentSeason,
+                              (currentSeason-5, currentSeason))
 seasonCount = plotYears[1] - plotYears[0] + 1
 seasonRange = range(plotYears[0], plotYears[1] + 1)
 
@@ -135,4 +136,26 @@ ax.legend(plotTeams)  # , bbox_to_anchor=(1.5, 0.5))
 
 fig.set_figheight(12)
 fig.set_figwidth(15)
+fig.suptitle('Team Elo over Time')
 st.pyplot(fig)
+
+# Dataframe
+st.dataframe(rankingDfFilter)
+
+test = 30
+# Info
+st.markdown('_Elo rating system:_')
+st.latex(r''' R'_{Home} = R_{Home} + K (S_{Home} - E_{Home})''')
+st.latex(r''' E_{Home} = \frac{Q_A}{Q_A+Q_B}''')
+st.latex(
+    r''' Q_{Home} = 10^\frac{R_{Home}+{HF}+{HI}}{400}''')
+st.latex(r''' Q_{Away} = 10^\frac{R_{Away}}{400}''')
+st.latex(f''' K = {test}''')
+st.latex(f''' HF (Home Field Advantage) = {test}''')
+st.latex(f''' HI (Home Ice Advantage) = {test}''')
+
+# =============================================================================
+# Qa = pow(10, (homeElo + hfAdv + hiAdv) / 400)
+# Qb = pow(10, awayElo / 400)
+# Ea = Qa / (Qa + Qb)
+# =============================================================================
