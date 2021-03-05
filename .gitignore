@@ -3,3 +3,4 @@
 *.pyc
 *.bak
 *.ini
+.ipynb_checkpoints/
