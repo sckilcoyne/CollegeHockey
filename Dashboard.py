@@ -18,12 +18,20 @@ import matplotlib.dates as mdates
 # Import custom modules
 import rankings as rk
 import Ranking_Plots as rkplt
-import Ranking_Coefficients
+import Ranking_Coefficients as rc
 import Import_Results as ir
 
 debug = [False, True, 'verbose']
 
 rankMethod = 'fullElo'
+
+# Set styles and themes
+# matplotlib.rcParams.update(matplotlib.rcParamsDefault)
+githubContent = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/'
+githubBranch = 'master'
+styleFile = 'fig_style'
+styleFile = githubContent + githubBranch + '/' + styleFile + '.mplstyle'
+plt.style.use(styleFile)
 
 # %% Set up data
 
@@ -61,6 +69,7 @@ def import_from_github():
 # Import data from Guthub
 overallMetrics, rankingDict, resultsFull, results = import_from_github()
 # print(list(results))
+coeff = rc.coefficients()
 
 # Team list
 rankingDf = pd.DataFrame.from_dict(rankingDict, orient='index')
@@ -69,27 +78,38 @@ rankingDfFilter = rankingDf.loc[
     ((rankingDf['gameCount'] / rankingDf['yearCount']) > 5)]
 teamList = list(rankingDfFilter.index.values)
 
-currentBestTeams = rankingDfFilter.nlargest(10, rankMethod)
+currentBestTeams = rankingDfFilter.nlargest(5, rankMethod)
 currentBestTeams = list(currentBestTeams.index.values)
 # print(currentBest)
 
 # %% Create Dashboard
 st.title('College Hockey Rankings')
-st.header('by @sckilcoyne with data from CHN')
+'''
+by [@sckilcoyne](https://github.com/sckilcoyne/CollegeHockey)
+with data from [CHN](https://www.collegehockeynews.com/)
+'''
 
 # Interface
-plotTeams = st.sidebar.multiselect('Teams', teamList, currentBestTeams)
+plotTeams = st.sidebar.multiselect(
+    'Teams', teamList, currentBestTeams,
+    help='Select teams to compare ratings over time.')
 
 currentSeason = max(resultsFull.Season)
-plotYears = st.sidebar.slider('Seasons',
-                              min(resultsFull.Season),
-                              currentSeason,
-                              (currentSeason-5, currentSeason))
+plotYears = st.sidebar.slider(
+    'Seasons',
+    min(resultsFull.Season),
+    currentSeason,
+    (currentSeason-5, currentSeason),
+    help='Range of seasons to plot ratings over.')
 seasonCount = plotYears[1] - plotYears[0] + 1
 seasonRange = range(plotYears[0], plotYears[1] + 1)
 
-comparisonData = st.sidebar.checkbox('Season Extremes', True)
+comparisonData = st.sidebar.checkbox(
+    'Season Extremes', True,
+    help='Plots the Max, Min and Median rating of all teams for each season.')
 
+rankMethod = st.sidebar.selectbox(
+    'Ranking Method', rankingDfFilter.columns[2:])
 # Plots
 legend = []
 fig, axs = plt.subplots(1, seasonCount, squeeze=False, sharey=True)
@@ -140,19 +160,30 @@ fig.suptitle('Team Elo over Time')
 st.pyplot(fig)
 
 # Dataframe
-st.dataframe(rankingDfFilter)
+dfDisplay = rankingDfFilter.copy()
+dfDisplay = dfDisplay.astype(int)
+st.dataframe(dfDisplay)
 
-test = 30
-# Info
-st.markdown('_Elo rating system:_')
-st.latex(r''' R'_{Home} = R_{Home} + K (S_{Home} - E_{Home})''')
-st.latex(r''' E_{Home} = \frac{Q_A}{Q_A+Q_B}''')
-st.latex(
-    r''' Q_{Home} = 10^\frac{R_{Home}+{HF}+{HI}}{400}''')
-st.latex(r''' Q_{Away} = 10^\frac{R_{Away}}{400}''')
-st.latex(f''' K = {test}''')
-st.latex(f''' HF (Home Field Advantage) = {test}''')
-st.latex(f''' HI (Home Ice Advantage) = {test}''')
+with st.beta_expander(rankMethod + ' calculations and parameters'):
+
+    # Variables Used
+    kRating = coeff[rankMethod]['kRating']
+    hfa = coeff[rankMethod]['hfAdvantage']
+    hia = coeff[rankMethod]['hiAdvantage']
+    regress = coeff[rankMethod]['regress']
+
+    # Info
+    st.markdown('_Elo rating system:_')
+    st.latex(r''' R'_{Home} = R_{Home} + K (S_{Home} - E_{Home})''')
+    st.latex(r''' E_{Home} = \frac{Q_A}{Q_A+Q_B}''')
+    st.latex(
+        r''' Q_{Home} = 10^\frac{R_{Home}+{HF}+{HI}}{400}''')
+    st.latex(r''' Q_{Away} = 10^\frac{R_{Away}}{400}''')
+
+    st.latex(f''' K = {kRating}''')
+    st.latex(f''' HF (Home Field Advantage) = {hfa}''')
+    st.latex(f''' HI (Home Ice Advantage) = {hia}''')
+    st.latex(f''' Season Regression = {regress}''')
 
 # =============================================================================
 # Qa = pow(10, (homeElo + hfAdv + hiAdv) / 400)
