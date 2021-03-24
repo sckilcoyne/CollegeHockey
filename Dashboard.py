@@ -23,15 +23,28 @@ import Import_Results as ir
 
 debug = [False, True, 'verbose']
 
-rankMethod = 'fullElo'
+# rankMethod = 'fullElo'
 
-# Set styles and themes
+# %% Set plot style
 # matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 githubContent = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/'
 githubBranch = 'master'
 styleFile = 'fig_style'
 styleFile = githubContent + githubBranch + '/' + styleFile + '.mplstyle'
 plt.style.use(styleFile)
+
+# %% Create Dashboard
+st.set_page_config(page_title='College Hockey Ranking',
+                   page_icon=':ice_hockey_stick_and_puck:',
+                   initial_sidebar_state='expanded',
+                   layout='wide')
+
+
+st.title('College Hockey Rankings')
+'''
+by [@sckilcoyne](https://github.com/sckilcoyne/CollegeHockey)
+with data from [CHN](https://www.collegehockeynews.com/)
+'''
 
 # %% Set up data
 
@@ -78,21 +91,10 @@ rankingDfFilter = rankingDf.loc[
     ((rankingDf['gameCount'] / rankingDf['yearCount']) > 5)]
 teamList = list(rankingDfFilter.index.values)
 
-currentBestTeams = rankingDfFilter.nlargest(5, rankMethod)
-currentBestTeams = list(currentBestTeams.index.values)
-# print(currentBest)
 
-# %% Create Dashboard
-st.title('College Hockey Rankings')
-'''
-by [@sckilcoyne](https://github.com/sckilcoyne/CollegeHockey)
-with data from [CHN](https://www.collegehockeynews.com/)
-'''
+# %% Sidebar Interface
+container = st.sidebar.beta_container()
 
-# Interface
-plotTeams = st.sidebar.multiselect(
-    'Teams', teamList, currentBestTeams,
-    help='Select teams to compare ratings over time.')
 
 currentSeason = max(resultsFull.Season)
 plotYears = st.sidebar.slider(
@@ -104,13 +106,27 @@ plotYears = st.sidebar.slider(
 seasonCount = plotYears[1] - plotYears[0] + 1
 seasonRange = range(plotYears[0], plotYears[1] + 1)
 
+helpNote = 'Adds the Max, Min and Median rating of all teams for each season' \
+    ' to the rating plot.'
 comparisonData = st.sidebar.checkbox(
     'Season Extremes', True,
-    help='Plots the Max, Min and Median rating of all teams for each season.')
+    help=helpNote)
 
+rankMethods = rankingDfFilter.columns[2:]
+rankDefault = rankMethods.to_list().index('fullElo')
 rankMethod = st.sidebar.selectbox(
-    'Ranking Method', rankingDfFilter.columns[2:])
-# Plots
+    'Ranking Method', rankMethods, index=rankDefault,
+    help='Choose which rating method to display.')
+
+helpNote = 'Select teams to compare ratings over time.' \
+    'Defaults to current highest rated teams.'
+currentBestTeams = rankingDfFilter.nlargest(5, rankMethod)
+currentBestTeams = list(currentBestTeams.index.values)
+plotTeams = container.multiselect(
+    'Teams', teamList, currentBestTeams,
+    help=helpNote)
+
+# %% Team Comparison Plot
 legend = []
 fig, axs = plt.subplots(1, seasonCount, squeeze=False, sharey=True)
 fig.subplots_adjust(wspace=0.05)  # adjust space between axes
@@ -159,12 +175,16 @@ fig.set_figwidth(15)
 fig.suptitle('Team Elo over Time')
 st.pyplot(fig)
 
-# Dataframe
-dfDisplay = rankingDfFilter.copy()
-dfDisplay = dfDisplay.astype(int)
-st.dataframe(dfDisplay)
+# %% Current Ratings Dataframe
+with st.beta_expander('Current Rating of All Teams'):
+    dfDisplay = rankingDfFilter[['gameCount', 'yearCount', rankMethod]].copy()
+    dfDisplay.sort_values(rankMethod, ascending=False, inplace=True)
+    dfDisplay = dfDisplay.astype(int)
+    st.dataframe(dfDisplay)
 
-with st.beta_expander(rankMethod + ' calculations and parameters'):
+# %% Background of rating system selected
+with st.beta_expander('Rating Method (' + rankMethod +
+                      ') Background and Parameters'):
 
     # Variables Used
     kRating = coeff[rankMethod]['kRating']
@@ -190,3 +210,9 @@ with st.beta_expander(rankMethod + ' calculations and parameters'):
 # Qb = pow(10, awayElo / 400)
 # Ea = Qa / (Qa + Qb)
 # =============================================================================
+
+# %% Rating system comparisions
+with st.beta_expander('Rating System Comparisons'):
+    '''
+    ## WIP
+    '''
