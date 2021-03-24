@@ -172,7 +172,10 @@ ax.legend(plotTeams)  # , bbox_to_anchor=(1.5, 0.5))
 
 fig.set_figheight(12)
 fig.set_figwidth(15)
-fig.suptitle('Team Elo over Time')
+fig.suptitle('Team Ratings Comparison using ' + rankMethod,
+             fontsize='x-large',
+             fontweight='heavy')
+plt.tight_layout()
 st.pyplot(fig)
 
 # %% Current Ratings Dataframe
@@ -192,27 +195,43 @@ with st.beta_expander('Rating Method (' + rankMethod +
     hia = coeff[rankMethod]['hiAdvantage']
     regress = coeff[rankMethod]['regress']
 
-    # Info
-    st.markdown('_Elo rating system:_')
-    st.latex(r''' R'_{Home} = R_{Home} + K (S_{Home} - E_{Home})''')
-    st.latex(r''' E_{Home} = \frac{Q_A}{Q_A+Q_B}''')
-    st.latex(
-        r''' Q_{Home} = 10^\frac{R_{Home}+{HF}+{HI}}{400}''')
-    st.latex(r''' Q_{Away} = 10^\frac{R_{Away}}{400}''')
+    col1, col2 = st.beta_columns(2)
 
-    st.latex(f''' K = {kRating}''')
-    st.latex(f''' HF (Home Field Advantage) = {hfa}''')
-    st.latex(f''' HI (Home Ice Advantage) = {hia}''')
-    st.latex(f''' Season Regression = {regress}''')
+    # Formulas
+    with col1:
+        st.markdown('_Elo rating system:_')
+        st.latex(r''' R'_{Home} = R_{Home} + K (S_{Home} - E_{Home})''')
+        st.latex(r''' E_{Home} = \frac{Q_A}{Q_A+Q_B}''')
+        st.latex(
+            r''' Q_{Home} = 10^\frac{R_{Home}+{HF}+{HI}}{400}''')
+        st.latex(r''' Q_{Away} = 10^\frac{R_{Away}}{400}''')
 
-# =============================================================================
-# Qa = pow(10, (homeElo + hfAdv + hiAdv) / 400)
-# Qb = pow(10, awayElo / 400)
-# Ea = Qa / (Qa + Qb)
-# =============================================================================
+    # parameters
+    with col2:
+        st.markdown('_' + rankMethod + ' parameters:_')
+        st.latex(f''' K = {kRating}''')
+        st.latex(f''' HF (Home Field Advantage) = {hfa}''')
+        st.latex(f''' HI (Home Ice Advantage) = {hia}''')
+        st.latex(f''' Season Regression = {regress}''')
 
 # %% Rating system comparisions
 with st.beta_expander('Rating System Comparisons'):
     '''
-    ## WIP
+    # WIP
     '''
+
+# %% Other sections/dashboards to be added
+# Conference comparisons/average ratings
+#   With different methods of conference ratings (top, top quartile, mean,
+#       median, top 3/x, etc.)
+
+# Future game predicitions
+# End of season predicitons
+#   Make tourny, win title, etc.
+
+# Detailed history of individual teams
+#   Call out highs and lows
+#   Season-by-season box plot
+#   Biggest upset (both ways)
+
+# Comparison to polls
