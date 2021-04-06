@@ -4,15 +4,27 @@ Download and Import Hockey Results.
 
 @author: Scott
 """
-# Setup
-
+# %% Setup
+# Standard Modules
 import pandas as pd
 import numpy as np
 import time
-import streamlit as st
+from datetime import date
 
 
-def download_results_CHN(yearStart=1900, yearEnd=2021):
+# Custom Modules
+from utils.ForcePickle import pickle_protocol
+
+# %% Files
+dataFolder = 'Data/'
+
+gameDataRaw = 'Results_CHN.h5'
+gameData = 'Results_Composite.h5'
+
+# %% Generate Results Data
+
+
+def download_results_CHN(yearStart, yearEnd, outputFolder, outputFileName):
     """
     Download results from CHN.
 
@@ -21,42 +33,55 @@ def download_results_CHN(yearStart=1900, yearEnd=2021):
     yearStart : TYPE, optional
         DESCRIPTION. The default is 1900.
     yearEnd : TYPE, optional
-        DESCRIPTION. The default is 2020.
+        DESCRIPTION. The default is 2021.
 
     Returns
     -------
     None.
+    Saves full composite results to /Data/ folder.
 
     """
-    # Import CHN webpages
-    year_start = 1900
-    year_end = 2019
+    outputFile = outputFolder + outputFileName
+    print(outputFile)
 
-    chn_season_url = 'https://www.collegehockeynews.com/schedules/index.php?rtz=0&season='
+    # Import CHN webpages
+    chnScheduleURL = 'https://www.collegehockeynews.com/schedules/index.php'
+    selectSeason = '?rtz=0&season='
+    chnFullSeason = chnScheduleURL + selectSeason
 
     # results_composite = pd.DataFrame
 
-    for season_start in range(year_start, year_end):
-        season = str(season_start) + str(season_start+1)
-        chn_url = chn_season_url + season
+    for seasonStart in range(yearStart, yearEnd):
+        season = str(seasonStart) + str(seasonStart+1)
+        chnURL = chnFullSeason + season
     #     print(chn_url)
-        chn_tables = pd.read_html(chn_url, skiprows=1)
-        season_results = chn_tables[-1]
-        if season_start == year_start:
-            chn_composite = season_results
-        else:
-            chn_composite = chn_composite.append(season_results,
-                                                 ignore_index=True)
-        time.sleep(0.3)
-        print(season_start)
+        chnTables = pd.read_html(chnURL, skiprows=1)
+        seasonResults = chnTables[-1]
+        # if seasonStart == yearStart:
+        #     compositeResults = seasonResults
+        # else:
+        #     compositeResults = compositeResults.append(seasonResults,
+        #                                                ignore_index=True)
 
-    print(chn_composite.shape)
+        with pickle_protocol(2):
+            seasonResults.to_hdf(outputFile,
+                                 key='y' + season, mode='a')
 
-    # Write to CSV
-    chn_composite.to_csv(path_or_buf='CHN_Raw.csv', index=False)
+        time.sleep(0.3)  # Don't hammer CHN to fast
+        print(seasonStart)
+
+    # print(compositeResults.shape)
+
+    # # Write to CSV
+    # compositeResults.to_csv(path_or_buf='CHN_Raw.csv', index=False)
+
+    # # Write to HDF
+    # with pickle_protocol(2):
+    #     compositeResults.to_hdf(outputFolder + outputFile,
+    #                             key='raw_CHN_results', mode='w')
 
 
-def clean_results(fileName='CHN_Raw.csv'):
+def clean_results(fileName):
     """
     Clean up downloaded results from CHN.
 
@@ -71,7 +96,7 @@ def clean_results(fileName='CHN_Raw.csv'):
 
     """
     # Import CHN raw results
-    results_composite = pd.read_csv('CHN_Raw.csv')
+    results_composite = pd.read_csv(fileName)
     print(results_composite.shape)
 
     # Clean up data
@@ -141,6 +166,7 @@ def clean_results(fileName='CHN_Raw.csv'):
     results_cleaned.to_csv(path_or_buf='Results_Composite.csv', index='False')
 
 
+# %% Working with results data
 def results_shrink(results, startYear=2010, endYear=2019):
     """
     Select a subsection of all results.
@@ -168,8 +194,21 @@ def results_shrink(results, startYear=2010, endYear=2019):
     return resultsShrink
 
 
-@st.cache(suppress_st_warning=True)
 def load_composite_results(location='local'):
+    """
+    Read composite results file into workspace.
+
+    Parameters
+    ----------
+    location : TYPE, optional
+        DESCRIPTION. The default is 'local'.
+
+    Returns
+    -------
+    resultsFull : TYPE
+        DESCRIPTION.
+
+    """
     if location == 'local':
         resultsFull = pd.read_csv('Results_Composite.csv')
     else:
@@ -177,3 +216,40 @@ def load_composite_results(location='local'):
 
     print('Results shape: ', resultsFull.shape)
     return resultsFull
+
+
+# %% Run as script
+if __name__ == '__main__':
+
+    def valid_user_input(year, firstYear=0):
+        """
+        Verify years to download are reasonable.
+
+        Returns
+        -------
+        True/False
+
+        """
+        if not len(str(year)) == 4:
+            print('Enter 4 digit year')
+            return False
+        if year < 1900:
+            print('Hockey wasn\'t invented then')
+            return False
+        if year > date.today().year:
+            print('Time traveling is not allowed')
+            return False
+        if year < firstYear:
+            print(f'Pick year greater than {firstYear}')
+            return False
+        return True
+
+    startYear = int(input('Start Year: '))
+    while not valid_user_input(startYear):
+        startYear = int(input('Start Year: '))
+
+    endYear = int(input('End Year: '))
+    while not valid_user_input(endYear, startYear):
+        endYear = int(input('End Year: '))
+
+    download_results_CHN(startYear, endYear, dataFolder, gameDataRaw)
