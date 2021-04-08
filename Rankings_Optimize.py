@@ -4,11 +4,8 @@ Functions to calculate optimal parameters for ranking systems.
 
 @author: Scott
 """
-
-import Rankings as rk
-import Import_Results as ir
-import Ranking_Coefficients
-
+# %% Setup
+# Standard modules
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,12 +13,37 @@ import scipy.optimize as opt
 # from importlib import reload
 # reload(rk)
 
-# Import Data
+# Project Modules
+import Rankings as rk
+import Import_Results as ir
+from Ranking_Coefficients import coefficients
+
+
+# %% Import Results Data
 resultsFull = pd.read_csv('Results_Composite.csv')
 print('Results shape: ', resultsFull.shape)
 results = ir.results_shrink(resultsFull.copy(), 2000, 2019)
 
+# %% Optimization Helper Functions
+
+
 def ranking_error(values, rankType):
+    """
+    Get average error of all results.
+
+    Parameters
+    ----------
+    values : TYPE
+        DESCRIPTION.
+    rankType : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    errorMean : TYPE
+        DESCRIPTION.
+
+    """
     global results
     ratingCoeff = {}
     ratingCoeff[rankType] = {'initRating': values[1],
@@ -31,19 +53,19 @@ def ranking_error(values, rankType):
                              'hfAdvantage': 0,
                              'hiAdvantage': 0,
                              'goalDiffExp': 0}
-    
+
     # Run ranking with given coefficients
     results, rankingDict = rk.game_ranking(results, ratingCoeff, [rankType],
                                            False, False)
-    
+
     # Get average error of all results
     errorCol = rankType + '_Error'
     # errorMedian = results[errorCol].median()
     errorMean = results[errorCol].mean()
-    
+
     return errorMean
-        
-        
+
+
 def optimize_elo(ratingCoeff, rankType):
     """
     Calculate optimal parameters for Elo ranking.
@@ -62,9 +84,10 @@ def optimize_elo(ratingCoeff, rankType):
     None.
 
     """
-    x0  = np.array([30, 1300, 0.3])
-    res = opt.minimize(ranking_error, x0, args=(rankType), method='nelder-mead')
-    
+    x0 = np.array([30, 1300, 0.3])
+    res = opt.minimize(ranking_error, x0, args=(
+        rankType), method='nelder-mead')
+
     print(res)
     return res
 
@@ -108,12 +131,13 @@ def k_finder(results):
 
     plt.show()
 
+
 # %% Optimization
+if __name__ == '__main__':
+    # Setup
+    ratingCoeff = coefficients()
 
-# Setup
-ratingCoeff = Ranking_Coefficients.coefficients()
-rankingType = ['optimizeElo']
+    rankingType = ['optimizeElo']
 
-
-# Run Optimization
-optimize_elo(ratingCoeff, rankingType[0])
+    # Run Optimization
+    optimize_elo(ratingCoeff, rankingType[0])

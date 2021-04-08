@@ -17,7 +17,7 @@ from matplotlib.lines import Line2D
 # import matplotlib.cbook as cbook
 
 # Import custom modules
-import Rankings as rk
+import utils.Rankings as rk
 
 
 def drop_suffix(self, suffix):
