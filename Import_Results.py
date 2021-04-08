@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import time
 from datetime import date
-
+import h5py
 
 # Custom Modules
 from utils.ForcePickle import pickle_protocol
@@ -49,19 +49,13 @@ def download_results_CHN(yearStart, yearEnd, outputFolder, outputFileName):
     selectSeason = '?rtz=0&season='
     chnFullSeason = chnScheduleURL + selectSeason
 
-    # results_composite = pd.DataFrame
-
     for seasonStart in range(yearStart, yearEnd):
         season = str(seasonStart) + str(seasonStart+1)
         chnURL = chnFullSeason + season
-    #     print(chn_url)
         chnTables = pd.read_html(chnURL, skiprows=1)
         seasonResults = chnTables[-1]
-        # if seasonStart == yearStart:
-        #     compositeResults = seasonResults
-        # else:
-        #     compositeResults = compositeResults.append(seasonResults,
-        #                                                ignore_index=True)
+
+        seasonResults = seasonResults.astype(str)
 
         with pickle_protocol(2):
             seasonResults.to_hdf(outputFile,
@@ -70,15 +64,7 @@ def download_results_CHN(yearStart, yearEnd, outputFolder, outputFileName):
         time.sleep(0.3)  # Don't hammer CHN to fast
         print(seasonStart)
 
-    # print(compositeResults.shape)
-
-    # # Write to CSV
-    # compositeResults.to_csv(path_or_buf='CHN_Raw.csv', index=False)
-
-    # # Write to HDF
-    # with pickle_protocol(2):
-    #     compositeResults.to_hdf(outputFolder + outputFile,
-    #                             key='raw_CHN_results', mode='w')
+    print('Results download complete.')
 
 
 def clean_results(fileName):
@@ -87,83 +73,76 @@ def clean_results(fileName):
 
     Parameters
     ----------
-    fileName : TYPE, optional
-        DESCRIPTION. The default is 'CHN_Raw.csv'.
+    fileName : str
+        File name and path of raw results from CHN, saved as HDF.
 
     Returns
     -------
-    None.
+    Saves cleaned composite results to HDF.
 
     """
-    # Import CHN raw results
-    results_composite = pd.read_csv(fileName)
-    print(results_composite.shape)
-
-    # Clean up data
+    # Setup
+    outputFile = 'Data/Results_Composite.h5'
 
     headers = ['Away', 'Away_Score', 'Location', 'Home', 'Home_Score',
-               'OT', 'nan', 'Notes']
+               'OT', 'Time', 'Notes_1', 'drop', 'Notes_2']
 
-    # Remove all the extra columns
-    results_cleaned = results_composite[results_composite.columns[0:8]]
-    results_cleaned.columns = headers
-    results_cleaned = results_cleaned.drop(columns=['nan'])
+    resultsOutput = pd.DataFrame()
 
-    # Remove rows without data
-    # print(pd.notnull(results_cleaned['Away']))
-    results_cleaned = results_cleaned[pd.notnull(results_cleaned['Away'])]
-    results_cleaned = results_cleaned.reset_index(drop=True)
+    # Loop through each season
+    for season in h5py.File(fileName, 'r').keys():
+        # Get season results
+        seasonRaw = pd.read_hdf(fileName, key=season)
 
-    # Add game date column
-    dates = pd.to_datetime(results_cleaned.Away, errors='coerce')
-    # print(type(dates))
-    # print(dates)
-    # print(pd.isna(dates))
-    dates_ffill = dates.fillna(method='ffill')
-    results_cleaned['Date'] = dates_ffill
+        # ------ Clean up data ------
+        # Remove all the extra columns
+        resultsCleaned = seasonRaw[seasonRaw.columns[0:len(headers)]]
+        resultsCleaned.columns = headers
+        resultsCleaned = resultsCleaned.drop(columns=['drop'])
 
-    # Remove rows of dates
-    results_cleaned = results_cleaned[pd.isna(dates)]
-    results_cleaned = results_cleaned.reset_index(drop=True)
+        # Remove rows without data
+        resultsCleaned = resultsCleaned[pd.notnull(resultsCleaned['Away'])]
+        resultsCleaned = resultsCleaned.reset_index(drop=True)
 
-    # Clean games without scores
-    scorelessGamesAway = pd.isnull(results_cleaned['Away_Score'])
-    scorelessGamesHome = pd.isnull(results_cleaned['Home_Score'])
-    scorelessGames = scorelessGamesAway | scorelessGamesHome
-    missingScores = np.where(scorelessGames)[0]
-    # print(missingScores)
-    # print(scorelessGames[missingScores])
-    results_cleaned = results_cleaned.drop(missingScores)
-    # print(results_cleaned.shape)
+        # Add game date column
+        dates = pd.to_datetime(resultsCleaned.Away, errors='coerce')
+        dates_ffill = dates.fillna(method='ffill')
+        resultsCleaned['Date'] = dates_ffill
 
-    # Determine Conference
-    conf_isdigit = results_cleaned['Away_Score'].str.isdigit()
-    conf_isdigit = conf_isdigit.fillna(False)
-    # print(conf_isdigit.unique())
+        # Remove rows of dates
+        resultsCleaned = resultsCleaned[pd.isna(dates)]
+        resultsCleaned = resultsCleaned.reset_index(drop=True)
 
-    conf_isdigit = ~conf_isdigit
-    conf_score = results_cleaned['Away_Score']
-    # print(conf_isdigit)
-    conf = conf_score[conf_isdigit]
-    # print(type(conf))
-    # print(conf)
-    results_cleaned['Conference'] = conf
-    results_cleaned['Conference'] = results_cleaned['Conference'].fillna(
-        method='ffill')
-    results_cleaned = results_cleaned[~conf_isdigit]
+        # Clean games without scores
+        scorelessGamesAway = pd.isnull(resultsCleaned['Away_Score'])
+        scorelessGamesHome = pd.isnull(resultsCleaned['Home_Score'])
+        scorelessGames = scorelessGamesAway | scorelessGamesHome
+        missingScores = np.where(scorelessGames)[0]
+        resultsCleaned = resultsCleaned.drop(missingScores)
 
-    # Add Season to Each Game
-    results_cleaned['Season'] = pd.PeriodIndex(results_cleaned['Date'],
-                                               freq='A-Jul')
+        # Determine Conference
+        conf_isdigit = resultsCleaned['Away_Score'].str.isdigit()
+        conf_isdigit = conf_isdigit.fillna(False)
+        conf_isdigit = ~conf_isdigit
+        conf_score = resultsCleaned['Away_Score']
+        conf = conf_score[conf_isdigit]
+        resultsCleaned['Conference'] = conf
+        resultsCleaned['Conference'] = resultsCleaned['Conference'].fillna(
+            method='ffill')
+        resultsCleaned = resultsCleaned[~conf_isdigit]
 
-    # Sort Games by date
-    results_cleaned = results_cleaned.sort_values(by=['Date'])
+        # Add Season to Each Game
+        resultsCleaned['Season'] = str(season[1:5])
 
-    print(results_cleaned.shape)
-    # print(results_cleaned)
+        # Sort Games by date
+        resultsCleaned = resultsCleaned.sort_values(by=['Date'])
 
-    # Write to CSV
-    results_cleaned.to_csv(path_or_buf='Results_Composite.csv', index='False')
+        resultsOutput = resultsOutput.append(resultsCleaned)
+
+    # Wrtie to HDF
+    with pickle_protocol(2):
+        resultsOutput.to_hdf(outputFile,
+                             key='resultsComposite', mode='a')
 
 
 # %% Working with results data
@@ -200,19 +179,19 @@ def load_composite_results(location='local'):
 
     Parameters
     ----------
-    location : TYPE, optional
-        DESCRIPTION. The default is 'local'.
+    location : file path, optional
+        Full path to HDF file of composite results.
+        The default is 'local', file in project folder.
 
     Returns
     -------
-    resultsFull : TYPE
-        DESCRIPTION.
+    resultsFull : pandas dataframe
 
     """
     if location == 'local':
-        resultsFull = pd.read_csv('Results_Composite.csv')
+        resultsFull = pd.read_hdf('Data/Results_Composite.h5')
     else:
-        resultsFull = pd.read_csv(location)
+        resultsFull = pd.read_hdf(location)
 
     print('Results shape: ', resultsFull.shape)
     return resultsFull
@@ -221,7 +200,7 @@ def load_composite_results(location='local'):
 # %% Run as script
 if __name__ == '__main__':
 
-    def valid_user_input(year, firstYear=0):
+    def valid_year_input(year, firstYear=0):
         """
         Verify years to download are reasonable.
 
@@ -230,6 +209,13 @@ if __name__ == '__main__':
         True/False
 
         """
+        try:
+            year = int(year)
+            firstYear = int(firstYear)
+        except ValueError:
+            print('Give me a real number')
+            return False
+
         if not len(str(year)) == 4:
             print('Enter 4 digit year')
             return False
@@ -239,17 +225,27 @@ if __name__ == '__main__':
         if year > date.today().year:
             print('Time traveling is not allowed')
             return False
-        if year < firstYear:
+        if year <= firstYear:
             print(f'Pick year greater than {firstYear}')
             return False
+
         return True
 
-    startYear = int(input('Start Year: '))
-    while not valid_user_input(startYear):
-        startYear = int(input('Start Year: '))
+    def download_results():
+        """Download CHN results."""
+        startYear = input('Start Year: ')
+        while not valid_year_input(startYear):
+            startYear = input('Start Year: ')
 
-    endYear = int(input('End Year: '))
-    while not valid_user_input(endYear, startYear):
-        endYear = int(input('End Year: '))
+        endYear = input('End Year: ')
+        while not valid_year_input(endYear, startYear):
+            endYear = input('End Year: ')
 
-    download_results_CHN(startYear, endYear, dataFolder, gameDataRaw)
+        download_results_CHN(int(startYear), int(endYear),
+                             dataFolder, gameDataRaw)
+
+    if input('Download Results? [y] ') == 'y':
+        download_results()
+        clean_results(dataFolder + gameDataRaw)
+
+    resultsComposite = load_composite_results()
