@@ -27,10 +27,10 @@ import importlib
 import matplotlib.pyplot as plt
 
 # Import all custom modules
-import rankings as rk
-import Ranking_Plots as rkplt
-import Ranking_Coefficients
-import Import_Results as ir
+import utils.Rankings as rk
+import utils.Ranking_Plots as rkplt
+from utils.Ranking_Coefficients import coefficients
+import utils.Import_Results as ir
 
 debug = [False, True, 'verbose']
 
@@ -40,7 +40,7 @@ debug = [False, True, 'verbose']
 resultsFull = ir.load_composite_results('local')
 
 # Get ranking coefficients
-ratingCoeff = Ranking_Coefficients.coefficients()
+ratingCoeff = coefficients()
 
 # Ranking Models to run
 rankingType = ['simpleElo']
