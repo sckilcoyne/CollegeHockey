@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Feb 14 12:54:00 2021
+Dashboard to explore and compare current and historical ratings of college
+hockey teams.
 
 @author: Scott
 """
@@ -8,22 +9,24 @@ Created on Sun Feb 14 12:54:00 2021
 # %% Setup
 # Import common modules
 import pandas as pd
-import importlib
+# import importlib
 import matplotlib.pyplot as plt
 import streamlit as st
 import requests
-import json
+# import json
 import matplotlib.dates as mdates
+import os
 
 # Import custom modules
-import rankings as rk
-import Ranking_Plots as rkplt
-import Ranking_Coefficients as rc
-import Import_Results as ir
+# import utils
+import utils.Streamlit_Setup as sl
+import utils.Rankings as rk
+import utils.Ranking_Plots as rkplt
+# import Ranking_Coefficients as rc
+# import Import_Results as ir
 
 debug = [False, True, 'verbose']
 
-# rankMethod = 'fullElo'
 
 # %% Set plot style
 # matplotlib.rcParams.update(matplotlib.rcParamsDefault)
@@ -34,12 +37,6 @@ styleFile = githubContent + githubBranch + '/' + styleFile + '.mplstyle'
 plt.style.use(styleFile)
 
 # %% Create Dashboard
-st.set_page_config(page_title='College Hockey Ranking',
-                   page_icon=':ice_hockey_stick_and_puck:',
-                   initial_sidebar_state='expanded',
-                   layout='wide')
-
-
 st.title('College Hockey Rankings')
 '''
 by [@sckilcoyne](https://github.com/sckilcoyne/CollegeHockey)
@@ -51,24 +48,31 @@ with data from [CHN](https://www.collegehockeynews.com/)
 
 @st.cache
 def import_from_github():
-    # Github data sources
-    githubRepo = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/'
-    githubBranch = 'master/'
-    githubURL = githubRepo + githubBranch
 
+    # Save loaded files in temp directory
+    # https://discuss.streamlit.io/t/file-permisson-error-on-streamlit-sharing/8291/5
+    temp = '/tmp/'
+    os.makedirs(temp, exist_ok=True)  # Make temp directory if needed
+
+    # Github data sources
+    githubBranch = 'master'
+    raw = '?raw=true'
+
+    # txt/csv files
+    githubRepo = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/'
+    githubURL = githubRepo + githubBranch + '/'
     rankingDictFile = githubURL + 'Ranking_Dict.txt'
     rankingResultsFile = githubURL + 'Results_Rankings.csv'
     compositeResultsFile = githubURL + 'Results_Composite.csv'
-    overallMetricsFile = 'https://github.com/sckilcoyne/CollegeHockey/blob/master/Overall_Metrics.h5?raw=true'
 
-    # Import data
-    r = requests.get(overallMetricsFile, allow_redirects=True)
-    open('Overall_Metrics_github.h5', 'wb').write(r.content)
-    overallMetrics = pd.read_hdf('Overall_Metrics_github.h5', 'overallMetrics')
+    # HDF files
+    githubRepo = 'https://github.com/sckilcoyne/CollegeHockey/blob/'
+    overallMetricsFile = githubRepo + githubBranch + '/' + \
+        'Overall_Metrics.h5' + raw
 
+    # Import text/csv data
     r = requests.get(rankingDictFile)
     rankingDict = r.json()
-    # print(len(rankingDict))
 
     resultsFull = pd.read_csv(compositeResultsFile)
     resultsFull['Date'] = pd.to_datetime(resultsFull['Date'])
@@ -76,13 +80,19 @@ def import_from_github():
     results = pd.read_csv(rankingResultsFile)
     results['Date'] = pd.to_datetime(results['Date'])
 
+    # Import HDF data
+    r = requests.get(overallMetricsFile, allow_redirects=True)
+    tempFile = os.path.join(temp, 'Overall_Metrics_github.h5')
+    open(tempFile, 'wb').write(r.content)
+    overallMetrics = pd.read_hdf(tempFile, 'overallMetrics')
+
     return overallMetrics, rankingDict, resultsFull, results
 
 
 # Import data from Guthub
 overallMetrics, rankingDict, resultsFull, results = import_from_github()
 # print(list(results))
-coeff = rc.coefficients()
+coeff = sl.coefficients_cache()
 
 # Team list
 rankingDf = pd.DataFrame.from_dict(rankingDict, orient='index')
@@ -93,7 +103,7 @@ teamList = list(rankingDfFilter.index.values)
 
 
 # %% Sidebar Interface
-container = st.sidebar.beta_container()
+teamSelectContainer = st.sidebar.beta_container()
 
 
 currentSeason = max(resultsFull.Season)
@@ -122,7 +132,7 @@ helpNote = 'Select teams to compare ratings over time.' \
     'Defaults to current highest rated teams.'
 currentBestTeams = rankingDfFilter.nlargest(5, rankMethod)
 currentBestTeams = list(currentBestTeams.index.values)
-plotTeams = container.multiselect(
+plotTeams = teamSelectContainer.multiselect(
     'Teams', teamList, currentBestTeams,
     help=helpNote)
 
