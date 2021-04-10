@@ -266,7 +266,7 @@ def rating_elo(homeElo, awayElo, goalDiff, ratingCoeffMethod, debug=False):
     k = ratingCoeffMethod['kRating']
     hfAdv = ratingCoeffMethod['hfAdvantage']  # Home Team
     hiAdv = ratingCoeffMethod['hiAdvantage']  # Home Ice
-    goalDiffExp = ratingCoeffMethod['goalDiffExp']
+    # goalDiffExp = ratingCoeffMethod['goalDiffExp']
 
     # Determine winner of game
     if goalDiff > 0:
@@ -408,7 +408,8 @@ def game_ranking(results, ratingCoeff, rankingType,
             else:
                 raise ValueError('Unknown Ranking Method.')
 
-#         [eloHome, eloAway, predictError] = elo_simple(eloHome, eloAway, goalDiff, ratingCoeff[rankingType]['kRating'])
+        # [eloHome, eloAway, predictError] = elo_simple(
+        #     eloHome, eloAway, goalDiff, ratingCoeff[rankingType]['kRating'])
 
             # Update Current Ranking Tracker
             rankingDict[teamAway][rankingMethod] = eloAway
@@ -441,8 +442,22 @@ def game_ranking(results, ratingCoeff, rankingType,
 
 
 def team_games(results, team='Northeastern'):
-    # Collect all games by given team
+    """
+    Collect all games by given team.
 
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+    team : TYPE, optional
+        DESCRIPTION. The default is 'Northeastern'.
+
+    Returns
+    -------
+    teamGames : TYPE
+        DESCRIPTION.
+
+    """
     # Get columns
     awayCol = ([col for col in results.columns if '_Away' in col])
     homeCol = ([col for col in results.columns if '_Home' in col])
@@ -465,8 +480,22 @@ def team_games(results, team='Northeastern'):
 
 
 def team_season_metrics(results, rankingDict):
-    # Add season summary stats for each team to ratingDict
+    """
+    Add season summary stats for each team to ratingDict.
 
+    Parameters
+    ----------
+    results : TYPE
+        DESCRIPTION.
+    rankingDict : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    rankingDict : TYPE
+        DESCRIPTION.
+
+    """
     for team in rankingDict:
         teamGames = team_games(results, team)
         groupedGames = teamGames.groupby(['Season'])
@@ -482,8 +511,20 @@ def team_season_metrics(results, rankingDict):
 
 
 def overall_metrics(rankDict):
-    # Get rating summaries for all teams for each season
+    """
+    Get rating summaries for all teams for each season.
 
+    Parameters
+    ----------
+    rankDict : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    overallMetrics : TYPE
+        DESCRIPTION.
+
+    """
     # Parameters
     minGameThresh = 0
 
