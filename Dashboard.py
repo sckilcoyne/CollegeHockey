@@ -22,6 +22,7 @@ import os
 import utils.Streamlit_Setup as sl
 import utils.Rankings as rk
 import utils.Ranking_Plots as rkplt
+import Import_Results as ir
 # import Ranking_Coefficients as rc
 # import Import_Results as ir
 
@@ -33,7 +34,9 @@ debug = [False, True, 'verbose']
 githubContent = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/'
 githubBranch = 'master'
 styleFile = 'fig_style'
-styleFile = githubContent + githubBranch + '/' + styleFile + '.mplstyle'
+styleFolder = 'utils/'
+styleFile = githubContent + githubBranch + '/' +\
+    styleFolder + styleFile + '.mplstyle'
 plt.style.use(styleFile)
 
 # %% Create Dashboard
@@ -60,21 +63,29 @@ def import_from_github():
 
     # txt/csv files
     githubRepo = 'https://raw.githubusercontent.com/sckilcoyne/CollegeHockey/'
-    githubURL = githubRepo + githubBranch + '/'
+    utilFolder = 'utils/'
+    githubURL = githubRepo + githubBranch + '/' + utilFolder
     rankingDictFile = githubURL + 'Ranking_Dict.txt'
     rankingResultsFile = githubURL + 'Results_Rankings.csv'
-    compositeResultsFile = githubURL + 'Results_Composite.csv'
+
 
     # HDF files
     githubRepo = 'https://github.com/sckilcoyne/CollegeHockey/blob/'
+    dataFolder = 'Data/'
+    overallMetricsFileName = 'Overall_Metrics.h5'
+    compositeFileName = 'Results_Composite.h5'
+
     overallMetricsFile = githubRepo + githubBranch + '/' + \
-        'Overall_Metrics.h5' + raw
+         overallMetricsFileName + raw
+
+    compositeResultsFile = githubRepo + githubBranch + '/' + \
+         dataFolder + compositeFileName + raw
 
     # Import text/csv data
     r = requests.get(rankingDictFile)
     rankingDict = r.json()
 
-    resultsFull = pd.read_csv(compositeResultsFile)
+    resultsFull = ir.load_composite_results(compositeResultsFile)
     resultsFull['Date'] = pd.to_datetime(resultsFull['Date'])
 
     results = pd.read_csv(rankingResultsFile)

@@ -14,19 +14,11 @@ import scipy.optimize as opt
 # reload(rk)
 
 # Project Modules
-import Rankings as rk
+import utils.Rankings as rk
 import Import_Results as ir
-from Ranking_Coefficients import coefficients
-
-
-# %% Import Results Data
-resultsFull = pd.read_csv('Results_Composite.csv')
-print('Results shape: ', resultsFull.shape)
-results = ir.results_shrink(resultsFull.copy(), 2000, 2019)
+from utils.Ranking_Coefficients import coefficients
 
 # %% Optimization Helper Functions
-
-
 def ranking_error(values, rankType):
     """
     Get average error of all results.
@@ -132,8 +124,12 @@ def k_finder(results):
     plt.show()
 
 
-# %% Optimization
+# %% Optimization (Run as script)
 if __name__ == '__main__':
+    # Import Results Data
+    resultsFull = ir.load_composite_results('local')
+    results = ir.results_shrink(resultsFull.copy(), 2000, 2019)
+
     # Setup
     ratingCoeff = coefficients()
 

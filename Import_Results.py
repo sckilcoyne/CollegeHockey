@@ -139,6 +139,12 @@ def clean_results(fileName):
 
         resultsOutput = resultsOutput.append(resultsCleaned)
 
+
+    # Set Data types for ech column
+    resultsOutput['Season'] = resultsOutput['Season'].astype(int)
+    resultsOutput['Home_Score'] = resultsOutput['Home_Score'].astype(int)
+    resultsOutput['Away_Score'] = resultsOutput['Away_Score'].astype(int)
+
     # Wrtie to HDF
     with pickle_protocol(2):
         resultsOutput.to_hdf(outputFile,
@@ -165,8 +171,9 @@ def results_shrink(results, startYear=2010, endYear=2019):
         Subsection of results.
 
     """
-    resultsShrink = results[(results.Season >= startYear) &
-                            (results.Season <= endYear)]
+
+    resultsShrink = results[(results.Season >= int(startYear)) &
+                            (results.Season <= int(endYear))]
 
     print('Results limited to ', str(startYear), ' through ', str(endYear))
     print('Results shape: ', resultsShrink.shape)
@@ -246,6 +253,8 @@ if __name__ == '__main__':
 
     if input('Download Results? [y] ') == 'y':
         download_results()
+        clean_results(dataFolder + gameDataRaw)
+    elif input('Clean results? [y] ') =='y':
         clean_results(dataFolder + gameDataRaw)
 
     resultsComposite = load_composite_results()
