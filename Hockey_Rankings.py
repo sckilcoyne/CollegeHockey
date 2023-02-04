@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import utils.Rankings as rk
 import utils.Ranking_Plots as rkplt
 from utils.Ranking_Coefficients import coefficients
-import utils.Import_Results as ir
+import Import_Results as ir
 
 debug = [False, True, 'verbose']
 

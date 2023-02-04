@@ -11,6 +11,8 @@ import numpy as np
 import time
 from datetime import date
 import h5py
+import requests
+import os
 
 # Custom Modules
 from utils.ForcePickle import pickle_protocol
@@ -198,7 +200,12 @@ def load_composite_results(location='local'):
     if location == 'local':
         resultsFull = pd.read_hdf('Data/Results_Composite.h5')
     else:
-        resultsFull = pd.read_hdf(location)
+        # resultsFull = pd.read_hdf(location)
+        r = requests.get(location)
+        with open('temp.h5', 'wb') as f:
+            f.write(r.content)
+        resultsFull = pd.read_hdf('temp.h5')
+        os.remove('temp.h5')
 
     print('Results shape: ', resultsFull.shape)
     return resultsFull
